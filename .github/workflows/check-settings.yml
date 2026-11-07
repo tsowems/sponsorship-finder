@@ -1,0 +1,76 @@
+# Reports which secrets/variables GitHub Actions can see (yes/no only, never values),
+# and checks the databases and Companies House key actually work.
+# Runs automatically when this file is pushed to staging, or manually from the Actions tab.
+name: Check settings
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [staging]
+    paths: ['.github/workflows/check-settings.yml']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Which settings can Actions see?
+        env:
+          S_PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL != '' }}
+          S_STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL != '' }}
+          S_PROD_BETTER_AUTH_SECRET: ${{ secrets.PROD_BETTER_AUTH_SECRET != '' }}
+          S_STAGING_BETTER_AUTH_SECRET: ${{ secrets.STAGING_BETTER_AUTH_SECRET != '' }}
+          S_COMPANIES_HOUSE_API_KEY: ${{ secrets.COMPANIES_HOUSE_API_KEY != '' }}
+          S_RESEND_API_KEY: ${{ secrets.RESEND_API_KEY != '' }}
+          V_PROD_SITE_URL: ${{ vars.PROD_SITE_URL != '' }}
+          V_STAGING_SITE_URL: ${{ vars.STAGING_SITE_URL != '' }}
+          V_EMAIL_FROM: ${{ vars.EMAIL_FROM != '' }}
+          V_SITE_NAME: ${{ vars.SITE_NAME != '' }}
+          # Common mistakes: secret saved as a *variable*, or under a different name
+          WRONG_V_PROD_DATABASE_URL: ${{ vars.PROD_DATABASE_URL != '' }}
+          WRONG_V_STAGING_DATABASE_URL: ${{ vars.STAGING_DATABASE_URL != '' }}
+          WRONG_V_COMPANIES_HOUSE_API_KEY: ${{ vars.COMPANIES_HOUSE_API_KEY != '' }}
+          WRONG_S_DATABASE_URL: ${{ secrets.DATABASE_URL != '' }}
+          WRONG_S_PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL != '' }}
+        run: |
+          yn() { [ "$1" = true ] && echo "yes" || echo "NO"; }
+          echo "Repository SECRETS (Settings → Secrets and variables → Actions → Secrets tab):"
+          for n in PROD_DATABASE_URL STAGING_DATABASE_URL PROD_BETTER_AUTH_SECRET STAGING_BETTER_AUTH_SECRET COMPANIES_HOUSE_API_KEY RESEND_API_KEY; do
+            v="S_$n"; printf "  %-28s %s\n" "$n" "$(yn "${!v}")"; done
+          echo "Repository VARIABLES (… → Variables tab):"
+          for n in PROD_SITE_URL STAGING_SITE_URL EMAIL_FROM SITE_NAME; do
+            v="V_$n"; printf "  %-28s %s\n" "$n" "$(yn "${!v}")"; done
+          echo
+          [ "$WRONG_V_PROD_DATABASE_URL" = true ] && echo "::warning::PROD_DATABASE_URL is saved as a VARIABLE. Delete it there and add it on the SECRETS tab."
+          [ "$WRONG_V_STAGING_DATABASE_URL" = true ] && echo "::warning::STAGING_DATABASE_URL is saved as a VARIABLE. Move it to the SECRETS tab."
+          [ "$WRONG_V_COMPANIES_HOUSE_API_KEY" = true ] && echo "::warning::COMPANIES_HOUSE_API_KEY is saved as a VARIABLE. Move it to the SECRETS tab."
+          [ "$WRONG_S_DATABASE_URL" = true ] && echo "::warning::A secret named DATABASE_URL exists. The workflows need PROD_DATABASE_URL and STAGING_DATABASE_URL."
+          [ "$WRONG_S_PRODUCTION_DATABASE_URL" = true ] && echo "::warning::A secret named PRODUCTION_DATABASE_URL exists. Rename it to PROD_DATABASE_URL."
+          if [ "$S_PROD_DATABASE_URL" != true ]; then
+            echo "::error::PROD_DATABASE_URL is not visible to Actions. It must be a *Repository secret* under Settings → Secrets and variables → Actions → Secrets. Environment secrets, Codespaces/Dependabot secrets and Variables are not used."
+          fi
+
+      - name: Do the databases answer?
+        env:
+          PROD: ${{ secrets.PROD_DATABASE_URL }}
+          STAGING: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          for name in PROD STAGING; do
+            url="${!name}"
+            if [ -z "$url" ]; then echo "$name: not set"; continue; fi
+            host=$(echo "$url" | sed -E 's#.*@([^/?]+).*#\1#')
+            if out=$(psql "$url" -tAc "select count(*) from drizzle.__drizzle_migrations" 2>&1); then
+              echo "$name ($host): connected, $out migrations applied"
+            else
+              echo "::error::$name ($host): could not connect: $(echo "$out" | head -1)"
+            fi
+          done
+
+      - name: Is the Companies House key accepted?
+        env:
+          KEY: ${{ secrets.COMPANIES_HOUSE_API_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then echo "COMPANIES_HOUSE_API_KEY: not set"; exit 0; fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" -u "$KEY:" "https://api.company-information.service.gov.uk/search/companies?q=tesco&items_per_page=1")
+          if [ "$code" = 200 ]; then echo "Companies House key: accepted (HTTP 200)"
+          else echo "::error::Companies House key rejected (HTTP $code). Use a REST key from a Live application, and copy the value labelled 'API key'."; fi
