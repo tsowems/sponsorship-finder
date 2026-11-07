@@ -61,6 +61,7 @@ Repo → **Settings → Secrets and variables → Actions**.
 | `PROD_SITE_URL` | `https://yourdomain.co.uk` (or the `*.vercel.app` URL until you have a domain) |
 | `STAGING_SITE_URL` | your staging URL (step 4.5) |
 | `EMAIL_FROM` | `Sponsor Finder <alerts@yourdomain.co.uk>` (or `Sponsor Finder <onboarding@resend.dev>` for testing) |
+| `SITE_NAME` | brand name used in alert emails (optional; default "Sponsor Finder") |
 
 Keep **`main` as the default branch**. Scheduled workflows always run from the default branch, and pull requests default to targeting it.
 
