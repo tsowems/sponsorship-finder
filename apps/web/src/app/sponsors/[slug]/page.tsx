@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RatingBadge, StatusBadge } from '@/components/Badges';
 import { EventPill } from '@/components/ChangeList';
+import { JobsPanel } from '@/components/JobsPanel';
 import { ProfileRequest } from '@/components/ProfileRequest';
 import { WatchButton } from '@/components/WatchButton';
 import { getSponsorBySlug } from '@/lib/data';
@@ -41,7 +42,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const { slug } = await params;
   const data = await getSponsorBySlug(slug);
   if (!data) notFound();
-  const { sponsor, events, trackingSince, sameName, profile, jobs } = data;
+  const { sponsor, events, trackingSince, sameName, profile } = data;
   const active = sponsor.status === 'active';
   const downgraded = sponsor.rating.startsWith('B');
 
@@ -137,48 +138,14 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                 <a href={profile.website} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
                   Visit {new URL(profile.website).hostname.replace(/^www\./, '')} ↗
                 </a>
-                {profile.careersUrl && (
-                  <a href={profile.careersUrl} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-                    Careers page ↗
-                  </a>
-                )}
               </div>
-              {jobs.length > 0 ? (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold text-slate-700">
-                    {profile.ukJobsCount > 0 ? `${profile.ukJobsCount} open role${profile.ukJobsCount === 1 ? '' : 's'} in the UK` : 'Open roles (none listed in the UK)'}
-                    {profile.jobsCount > profile.ukJobsCount && <span className="font-normal text-slate-500"> · {profile.jobsCount} worldwide</span>}
-                  </h3>
-                  <ul className="divide-y divide-slate-100 rounded-md border border-slate-100">
-                    {jobs.map((j) => (
-                      <li key={j.id}>
-                        <a href={j.url} rel="noopener nofollow" target="_blank" className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-3 py-2.5 hover:bg-slate-50">
-                          <span className="font-medium text-slate-900">{j.title}</span>
-                          <span className="text-sm text-slate-500">
-                            {[j.location, j.department].filter(Boolean).join(' · ')}
-                            {j.postedAt ? ` · posted ${formatDate(j.postedAt)}` : ''}
-                          </span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                  {profile.jobsCount > jobs.length && profile.careersUrl && (
-                    <a href={profile.careersUrl} rel="noopener nofollow" target="_blank" className="mt-2 inline-block text-sm text-indigo-700 hover:underline">
-                      See all {profile.jobsCount} roles on their careers site ↗
-                    </a>
-                  )}
-                  <p className="mt-2 text-xs text-slate-500">
-                    Listed on the company&apos;s own hiring page{profile.jobsCheckedAt ? `, checked ${formatDate(profile.jobsCheckedAt)}` : ''}. Not every role
-                    is eligible for sponsorship: check the job advert or ask the employer.
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-600">
-                  {profile.careersUrl
-                    ? 'Open roles are listed on their careers page.'
-                    : 'We couldn’t find a careers page on their website. Try their site’s “Careers” or “Jobs” section, or ask them directly.'}
-                </p>
-              )}
+              <JobsPanel
+                sponsorId={sponsor.id}
+                slug={sponsor.slug}
+                jobsCount={profile.jobsCount}
+                ukJobsCount={profile.ukJobsCount}
+                hasCareersPage={Boolean(profile.careersUrl)}
+              />
               <p className="text-xs text-slate-500">
                 {profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
                   ? 'Website confirmed using the company’s registration number.'

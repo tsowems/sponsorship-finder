@@ -1,4 +1,5 @@
 import { SearchAutocomplete } from './SearchAutocomplete';
+import { TownAutocomplete } from './TownAutocomplete';
 
 export function SearchForm({
   q,
@@ -21,14 +22,7 @@ export function SearchForm({
     <form action="/sponsors" method="get" role="search" className="w-full">
       <div className="flex flex-col gap-2 sm:flex-row">
         <SearchAutocomplete defaultValue={q} className={`${input} ${size === 'lg' ? 'h-14 text-lg' : 'h-11'}`} />
-        <label className="sr-only" htmlFor="town">Town or city</label>
-        <input
-          id="town"
-          name="town"
-          defaultValue={town}
-          placeholder="Town / city (optional)"
-          className={`${input} ${size === 'lg' ? 'h-14 text-lg' : 'h-11'} sm:max-w-56`}
-        />
+        <TownAutocomplete defaultValue={town} className={`${input} ${size === 'lg' ? 'h-14 text-lg' : 'h-11'}`} />
         <button
           type="submit"
           className={`rounded-lg bg-indigo-600 px-6 font-medium text-white hover:bg-indigo-700 ${size === 'lg' ? 'h-14 text-lg' : 'h-11'}`}

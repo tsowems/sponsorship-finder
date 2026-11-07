@@ -60,7 +60,9 @@ The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-get
 
 | Endpoint | Method | Auth | Purpose |
 |---|---|---|---|
-| `/api/suggest?q=` | GET | — | Type-ahead, up to 8 matches. Cached in Next + `Cache-Control` for CDNs |
+| `/api/suggest?q=` | GET | — | Company type-ahead, up to 8 matches. Cached in Next + `Cache-Control` for CDNs |
+| `/api/towns?q=` | GET | — | Town type-ahead: towns starting with the text, biggest first, one per town (most common spelling) |
+| `/api/jobs?sponsorId=` | GET | **required** | Open roles + careers link for a company. Jobs are only shown to signed-in users |
 | `/api/auth/*` | GET/POST | — | Everything Better Auth does (sign-in, callback, session, sign-out) |
 | `/api/watch?sponsorId=` | GET | optional | `{ signedIn, watching }` |
 | `/api/watch` | POST / DELETE | required | Body `{ sponsorId }` |
@@ -132,6 +134,8 @@ licensed sponsors ranked above removed ones.
 | `WatchButton` | **client** | Watch / stop watching on company pages |
 | `SaveSearchButton` | **client** | "Email me new sponsors matching…" on search results |
 | `LoginForm` | **client** | Google button + magic-link form |
+| `JobsPanel` | **client** | On company pages: shows the role count to everyone, and the roles + careers link only after sign-in (from `/api/jobs`) |
+| `TownAutocomplete` | **client** | Town box in `SearchForm` with suggestions from `/api/towns` |
 | `AccountControls` | **client** | Buttons/forms on `/account`; call the APIs then `router.refresh()` |
 | `CookieBanner`, `CookieSettingsButton` | **client** | Consent banner ("Essential only" / "Accept all") and the footer link that reopens it. State lives in `lib/consent.ts` |
 
