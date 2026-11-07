@@ -1,4 +1,5 @@
-export const SITE_NAME = 'Sponsor Finder';
+/** Override with the SITE_NAME env var (also used in emails sent by the worker). */
+export const SITE_NAME = process.env.SITE_NAME || 'Sponsor Finder';
 export const SITE_TAGLINE = 'Find UK employers licensed to sponsor Skilled Worker visas';
 export const SITE_URL = (process.env.SITE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 export const REGISTER_URL =

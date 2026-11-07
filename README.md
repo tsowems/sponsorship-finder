@@ -11,7 +11,8 @@ packages/email  Resend sender, email templates, signed unsubscribe links
 
 ## Setup
 
-Hosting, staging/production branches and CI are described in [DEPLOYMENT.md](DEPLOYMENT.md).
+📚 **Developer documentation: [docs/](docs/README.md)** (architecture, data pipeline, database, website, auth, recipes).
+Hosting, staging/production branches and CI: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 
 Requires Node.js 20+ and a Postgres database (we use Neon).
