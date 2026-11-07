@@ -143,8 +143,8 @@ flowchart LR
   B --> C[new SQL file in<br/>packages/db/drizzle/]
   C --> D[review the SQL]
   D --> E[npm run db:migrate<br/>local / staging]
-  E --> F[commit + push to staging<br/>CI migrates staging DB]
-  F --> G[merge to main<br/>workflow migrates production]
+  E --> F[commit + push to staging<br/>Vercel preview build migrates staging DB]
+  F --> G[merge to main<br/>Vercel production build migrates production DB]
 ```
 
 Rules:
@@ -152,9 +152,11 @@ Rules:
 1. **Never edit a migration that's been applied anywhere.** Make a new one.
 2. **Review the generated SQL** before committing. drizzle-kit sometimes proposes drop + create where you meant
    a rename. It asks interactively; read carefully.
-3. **Keep changes additive** across a release (add a column → deploy → backfill → later make it required or drop
+3. **Vercel runs migrations before building** (`apps/web/scripts/migrate-on-vercel.mjs`). The new code is only
+   served once the schema is ready; a failed migration stops the build and the old version keeps serving.
+4. **Keep changes additive** across a release (add a column → deploy → backfill → later make it required or drop
    the old one). The old site keeps serving for a minute while the new one deploys.
-4. Custom SQL drizzle can't express (extensions, data backfills): generate an empty migration with
+5. Custom SQL drizzle can't express (extensions, data backfills): generate an empty migration with
    `npx drizzle-kit generate --custom --name my_change` inside `packages/db`, then write the SQL.
 
 drizzle-kit records applied migrations in `drizzle.__drizzle_migrations` in each database.

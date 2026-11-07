@@ -48,7 +48,7 @@ Repo → **Settings → Secrets and variables → Actions**.
 
 | Name | Value |
 |---|---|
-| `PROD_DATABASE_URL` | Neon `main` pooled URL |
+| `PROD_DATABASE_URL` | Neon `main` pooled URL (used by the scheduled import and enrichment) |
 | `PROD_BETTER_AUTH_SECRET` | production secret from step 2 |
 | `STAGING_DATABASE_URL` | Neon `staging` pooled URL |
 | `STAGING_BETTER_AUTH_SECRET` | staging secret from step 2 |
@@ -140,15 +140,16 @@ When staging looks right:
 
 1. GitHub → **Pull requests → New** → base `main` ← compare `staging` → Create.
 2. Wait for the **CI** check to go green.
-3. **Merge**. Vercel deploys production; if the PR added migrations, the
-   **Migrate production database** workflow applies them.
+3. **Merge**. Vercel builds production; the build first applies any new database migrations to the
+   production database (`apps/web/scripts/migrate-on-vercel.mjs`), then builds the site.
 4. Bring staging level with main: `git switch staging && git pull origin main && git push`.
 
 ### Database changes
 
 1. Edit `packages/db/src/schema.ts` → `npm run db:generate` → commit the new file in `packages/db/drizzle/`.
-2. Push to staging: CI applies it to the staging database before building.
-3. Merging to main applies it to production automatically.
+2. Push to staging: the Vercel preview build (and CI) apply it to the staging database before building.
+3. Merging to main: the Vercel production build applies it to the production database before building.
+   If a migration fails, the build stops and the previous version keeps serving.
 4. Keep migrations **additive** (add columns/tables; drop old ones in a later release), because the
    old site keeps running for a minute or two while the new one deploys.
 
@@ -157,8 +158,9 @@ When staging looks right:
 | Workflow | Runs when | Does |
 |---|---|---|
 | `ci.yml` | push to `staging`, PR into `main` | typecheck, lint, tests, migrate staging DB, build |
-| `migrate-production.yml` | push to `main` that changes migrations | applies migrations to production |
 | `register-import.yml` | weekdays every 2h 06:15–18:15 UTC, weekends 12:15 UTC, or manually | imports a changed register, sends alert emails |
 | `enrich.yml` | every 4 hours (:40), or manually | finds websites, careers pages and jobs for 150 sponsors; refreshes job lists |
 
 Approximate Actions usage (private repo, 2,000 free minutes): import ~300, enrichment ~600, CI ~100 minutes/month.
+
+Database migrations are **not** a workflow: Vercel applies them at the start of each build (see "Database changes").

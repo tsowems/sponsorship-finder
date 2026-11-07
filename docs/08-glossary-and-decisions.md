@@ -89,6 +89,10 @@ Instant feedback while developing; Next.js and tsx compile on the fly.
 ### postgres.js pinned to v3
 drizzle-orm 0.45 is tested against v3; v4 changed how parameter types are decided.
 
+### Migrations run inside the Vercel build
+A separate "migrate production" workflow raced the Vercel build: the build could start before the new columns
+existed, fail, and leave the old version live. Running migrations as the first build step guarantees the order.
+
 ### Repo-level secrets with `PROD_`/`STAGING_` prefixes
 GitHub Actions *environments* aren't available for private repos on the Free plan.
 

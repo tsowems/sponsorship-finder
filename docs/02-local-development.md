@@ -53,7 +53,7 @@ Run from the **repo root** unless noted.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Next.js dev server with hot reload on :3000 |
-| `npm run build` | Production build of the website (needs `DATABASE_URL`: pages are prerendered from the DB) |
+| `npm run build` | Production build of the website (needs `DATABASE_URL`: pages are prerendered from the DB). On Vercel it also applies pending migrations first |
 | `npm run start -w web` | Serve the production build (after `npm run build`) |
 | `npm run import` | Check gov.uk once; import if the register changed; then send pending alerts |
 | `npm run import -- --dry-run` | Show what *would* change; write nothing |
