@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { buildHref, Pagination } from '@/components/Pagination';
+import { SaveSearchButton } from '@/components/SaveSearchButton';
 import { SearchForm } from '@/components/SearchForm';
 import { SponsorList } from '@/components/SponsorList';
 import { PAGE_SIZE, searchSponsors, type SearchInput } from '@/lib/data';
@@ -66,6 +67,7 @@ async function Results({ searchParams }: { searchParams: Search }) {
           {input.q ? ` “${input.q}”` : ''}
           {input.town ? ` in ${input.town}` : ''}.
         </p>
+        {(input.q || input.town) && input.status === 'active' && <SaveSearchButton q={input.q} town={input.town} />}
         {suggestions.length > 0 && (
           <>
             <h2 className="font-medium">Did you mean…</h2>
@@ -86,7 +88,10 @@ async function Results({ searchParams }: { searchParams: Search }) {
 
   return (
     <div>
-      <p className="mb-3 text-sm text-slate-600">{formatNumber(total)} sponsors</p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-slate-600">{formatNumber(total)} sponsors</p>
+        {(input.q || input.town) && input.status === 'active' && <SaveSearchButton q={input.q} town={input.town} />}
+      </div>
       <SponsorList items={results} />
       <Pagination page={input.page} totalPages={totalPages} href={(page) => buildHref('/sponsors', { ...input, status: input.status === 'active' ? undefined : input.status, page })} />
     </div>

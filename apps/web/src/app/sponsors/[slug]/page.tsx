@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RatingBadge, StatusBadge } from '@/components/Badges';
 import { EventPill } from '@/components/ChangeList';
+import { WatchButton } from '@/components/WatchButton';
 import { getSponsorBySlug } from '@/lib/data';
 import { formatDate } from '@/lib/format';
 import { SITE_URL } from '@/lib/site';
@@ -130,6 +131,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
         </section>
 
         <aside className="space-y-4">
+          <WatchButton sponsorId={sponsor.id} slug={sponsor.slug} />
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <h2 className="mb-3 font-semibold">Find out more</h2>
             <ul className="space-y-2 text-sm">

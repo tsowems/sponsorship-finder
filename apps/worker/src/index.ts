@@ -1,9 +1,10 @@
 /**
  * Long-running worker: checks gov.uk for a new register file every hour
- * (cheap - one small API call; it only downloads when the file changes).
+ * (cheap - one small API call; it only downloads when the file changes), then emails alerts.
  */
 import { Cron } from 'croner';
 import { closeDb } from '@sponsors/db';
+import { sendPendingAlerts } from './alerts/send';
 import { runImport } from './register/import';
 
 async function checkRegister() {
@@ -13,6 +14,13 @@ async function checkRegister() {
     console.log(`[register] ${result.status}`, 'reason' in result ? result.reason : result.counts, `${Date.now() - started}ms`);
   } catch (err) {
     console.error('[register] import failed:', err);
+  }
+  // Also retries alerts left over from an earlier run that crashed mid-way.
+  try {
+    const alerts = await sendPendingAlerts();
+    if (alerts.snapshots) console.log('[alerts]', alerts);
+  } catch (err) {
+    console.error('[alerts] failed:', err);
   }
 }
 

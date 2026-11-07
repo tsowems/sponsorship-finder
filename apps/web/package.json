@@ -10,10 +10,13 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@sponsors/db": "*",
+    "@sponsors/email": "*",
+    "better-auth": "^1.7.18",
     "next": "16.4.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@sponsors/db": "*"
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

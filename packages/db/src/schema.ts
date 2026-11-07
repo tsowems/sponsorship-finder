@@ -8,8 +8,13 @@ import {
   pgTable,
   serial,
   text,
+  primaryKey,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { user } from './auth-schema';
+
+export * from './auth-schema';
 
 export const sponsorStatus = pgEnum('sponsor_status', ['active', 'removed']);
 
@@ -39,6 +44,8 @@ export const registerSnapshots = pgTable('register_snapshots', {
   removedCount: integer('removed_count').notNull().default(0),
   readdedCount: integer('readded_count').notNull().default(0),
   ratingChangedCount: integer('rating_changed_count').notNull().default(0),
+  /** Set once alert emails for this snapshot's changes have been sent. */
+  alertsProcessedAt: timestamp('alerts_processed_at', { withTimezone: true }),
 });
 
 /**
@@ -108,8 +115,54 @@ export const sponsorEvents = pgTable(
   ],
 );
 
+/** A user following a specific sponsor. */
+export const watches = pgTable(
+  'watches',
+  {
+    userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    sponsorId: integer('sponsor_id').notNull().references(() => sponsors.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.sponsorId] }), index('watches_sponsor_idx').on(t.sponsorId)],
+);
+
+/** "Tell me about new sponsors matching <name> in <town>". At least one of the two is set. */
+export const savedSearches = pgTable(
+  'saved_searches',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    query: text('query'),
+    normalizedQuery: text('normalized_query').notNull().default(''),
+    town: text('town'),
+    normalizedTown: text('normalized_town').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('saved_searches_user_query_idx').on(t.userId, t.normalizedQuery, t.normalizedTown)],
+);
+
+export const alertStatus = pgEnum('alert_status', ['pending', 'sent', 'failed']);
+
+/** One alert email per user per snapshot. The unique index makes sending idempotent. */
+export const alertDeliveries = pgTable(
+  'alert_deliveries',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    snapshotId: integer('snapshot_id').notNull().references(() => registerSnapshots.id, { onDelete: 'cascade' }),
+    status: alertStatus('status').notNull().default('pending'),
+    itemCount: integer('item_count').notNull(),
+    providerId: text('provider_id'),
+    error: text('error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('alert_deliveries_user_snapshot_idx').on(t.userId, t.snapshotId)],
+);
+
 export type Sponsor = typeof sponsors.$inferSelect;
 export type NewSponsor = typeof sponsors.$inferInsert;
 export type SponsorEvent = typeof sponsorEvents.$inferSelect;
 export type RegisterSnapshot = typeof registerSnapshots.$inferSelect;
 export type SponsorEventType = (typeof sponsorEventType.enumValues)[number];
+export type SavedSearch = typeof savedSearches.$inferSelect;

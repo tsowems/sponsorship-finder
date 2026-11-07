@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { UserMenu } from '@/components/UserMenu';
 import { REGISTER_URL, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 import './globals.css';
 
@@ -24,10 +25,11 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             <Link href="/" className="text-lg font-semibold tracking-tight text-slate-900">
               {SITE_NAME}
             </Link>
-            <nav className="flex gap-5 text-sm font-medium text-slate-600">
+            <nav className="flex items-center gap-5 text-sm font-medium text-slate-600">
               <Link href="/sponsors" className="hover:text-slate-900">Search</Link>
               <Link href="/changes" className="hover:text-slate-900">Latest changes</Link>
               <Link href="/about" className="hover:text-slate-900">About the data</Link>
+              <UserMenu />
             </nav>
           </div>
         </header>

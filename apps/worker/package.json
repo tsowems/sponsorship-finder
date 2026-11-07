@@ -7,11 +7,13 @@
     "import": "tsx --env-file-if-exists=../../.env src/cli/import.ts",
     "start": "tsx --env-file-if-exists=../../.env src/index.ts",
     "test": "tsx --test src/**/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "alerts": "tsx --env-file-if-exists=../../.env src/cli/alerts.ts"
   },
   "dependencies": {
     "croner": "^11.0.0",
-    "csv-parse": "^7.0.3"
+    "csv-parse": "^7.0.3",
+    "@sponsors/email": "*"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
