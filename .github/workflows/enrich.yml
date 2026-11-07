@@ -37,7 +37,7 @@ jobs:
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
           if [ "$TARGET" = production ]; then V="$PROD_DATABASE_URL"; else V="$STAGING_DATABASE_URL"; fi
-          if [ -z "$V" ]; then echo "::error::${TARGET^^}_DATABASE_URL is not set"; exit 1; fi
+          if [ -z "$V" ]; then [ "$TARGET" = production ] && N=PROD_DATABASE_URL || N=STAGING_DATABASE_URL; echo "::error::$N secret is empty in this run (run the Check settings workflow)"; exit 1; fi
           echo "DATABASE_URL=$V" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
