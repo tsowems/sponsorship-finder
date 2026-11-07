@@ -30,15 +30,28 @@ jobs:
         with:
           ref: ${{ (inputs.target || 'production') == 'production' && 'main' || 'staging' }}
 
-      - name: Select database
+      - name: Select production or staging settings
         env:
           TARGET: ${{ inputs.target || 'production' }}
           PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          PROD_BETTER_AUTH_SECRET: ${{ secrets.PROD_BETTER_AUTH_SECRET }}
+          PROD_SITE_URL: ${{ vars.PROD_SITE_URL }}
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          STAGING_BETTER_AUTH_SECRET: ${{ secrets.STAGING_BETTER_AUTH_SECRET }}
+          STAGING_SITE_URL: ${{ vars.STAGING_SITE_URL }}
         run: |
-          if [ "$TARGET" = production ]; then V="$PROD_DATABASE_URL"; else V="$STAGING_DATABASE_URL"; fi
-          if [ -z "$V" ]; then [ "$TARGET" = production ] && N=PROD_DATABASE_URL || N=STAGING_DATABASE_URL; echo "::error::$N secret is empty in this run (run the Check settings workflow)"; exit 1; fi
-          echo "DATABASE_URL=$V" >> "$GITHUB_ENV"
+          if [ "$TARGET" = production ]; then P=PROD; else P=STAGING; fi
+          db_var="${P}_DATABASE_URL"; secret_var="${P}_BETTER_AUTH_SECRET"; url_var="${P}_SITE_URL"
+          if [ -z "${!db_var}" ]; then echo "::error::$db_var secret is empty in this run (run the Check settings workflow)"; exit 1; fi
+          echo "DATABASE_URL=${!db_var}" >> "$GITHUB_ENV"
+          # Optional: used to refresh company pages on the website as soon as results are saved.
+          if [ -n "${!secret_var}" ] && [ -n "${!url_var}" ]; then
+            echo "BETTER_AUTH_SECRET=${!secret_var}" >> "$GITHUB_ENV"
+            echo "SITE_URL=${!url_var}" >> "$GITHUB_ENV"
+          else
+            echo "::warning::$secret_var or $url_var not set: pages will update on their normal hourly cache instead of instantly."
+          fi
+          echo "Target: $TARGET"
 
       - uses: actions/setup-node@v4
         with:

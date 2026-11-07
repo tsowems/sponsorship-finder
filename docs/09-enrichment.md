@@ -71,6 +71,11 @@ state codes are excluded).
 
 Re-checks: websites found → 60 days; not found → 30 days; errors → 1–7 days (backing off).
 
+After every 25 saved results (and after job refreshes) the worker calls the website's `/api/revalidate`, so
+company pages show new websites/jobs on the next visit instead of after the hourly cache expires. This needs
+`SITE_URL` and `BETTER_AUTH_SECRET` (the workflow passes `PROD_`/`STAGING_` values). Vercel's preview protection
+blocks it on staging, where pages fall back to the hourly refresh.
+
 ## Running it
 
 ```bash

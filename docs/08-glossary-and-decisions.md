@@ -104,6 +104,10 @@ registered name (or Wikidata ties them to the company number). See [Enrichment](
 The Home Office doesn't publish grant dates (the register has five columns). Other sites show the date *they* first
 saw a company; we do the same but say "on the register since at least…" for sponsors listed before we started.
 
+### Worker refreshes pages instead of short cache lifetimes
+Keeping `cacheLife('hours')` keeps pages fast and cheap; the worker revalidates exactly the pages it changed, so
+updates are still instant. The internal token is derived from `BETTER_AUTH_SECRET` to avoid another secret.
+
 ### Moves keep the original slug
 A sponsor that changes town keeps its URL, so links, watchers and search rankings survive.
 

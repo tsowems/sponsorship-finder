@@ -10,6 +10,7 @@ import {
 import { diffRegister, ROUTE_SEPARATOR, type ExistingSponsor, type RegisterDiff } from './diff';
 import { groupSkilledWorkerSponsors, type RegisterSponsor } from './group';
 import { parseRegister, SKILLED_WORKER_ROUTE } from './parse';
+import { revalidateSite } from '../revalidate';
 import { downloadRegister, getLatestRegisterSource, sha256 } from './source';
 
 /** Refuse to mark more than this share of active sponsors as removed in one go (protects against a broken file). */
@@ -271,5 +272,12 @@ export async function runImport(opts: ImportOptions = {}): Promise<ImportResult>
   });
 
   log(`Imported snapshot #${snapshotId}`);
+
+  // Show the changes on the website now: changed companies immediately, lists in the background.
+  const changedIds = [...diff.readded.map((r) => r.id), ...diff.updated.filter((u) => u.rating || u.location || u.routes).map((u) => u.id), ...diff.removed.map((r) => r.id)];
+  const changedSlugs = changedIds.length
+    ? (await db.select({ slug: sponsors.slug }).from(sponsors).where(inArray(sponsors.id, changedIds))).map((r) => r.slug)
+    : [];
+  await revalidateSite({ slugs: changedSlugs, all: true }, log);
   return { status: 'imported', snapshotId, isBaseline, sponsorCount: incoming.size, counts };
 }
