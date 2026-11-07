@@ -93,8 +93,12 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
     for (const url of await websitesByName(s.name)) if (await tryCandidate(url, 'wikidata_search', false)) break;
   }
   if (!out.website) {
-    for (const domain of candidateDomains(registeredName)) {
-      if (!(await resolvesPublicly(domain)) && !(await resolvesPublicly(`www.${domain}`))) continue;
+    // Look up every guess in parallel (cheap), then fetch only the ones that exist, in order.
+    const guesses = candidateDomains(registeredName);
+    const exists = await Promise.all(guesses.map(async (d) => (await resolvesPublicly(d)) || (await resolvesPublicly(`www.${d}`))));
+    const live = guesses.filter((_, i) => exists[i]);
+    if (live.length) log.push(`domain guesses that exist: ${live.join(', ')}`);
+    for (const domain of live) {
       if (await tryCandidate(`https://${domain}/`, 'domain_guess', false)) break;
     }
   }
