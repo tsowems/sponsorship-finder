@@ -28,14 +28,27 @@ export default function AboutPage() {
         <li><strong>New sponsor</strong>: the organisation appeared on the register for the first time since we started tracking.</li>
         <li>
           <strong>Removed from register</strong>: the organisation is no longer listed for the Skilled Worker route. The register doesn&apos;t
-          say why: the licence may have been revoked, surrendered or allowed to expire, or the organisation may have been renamed.
+          say why: the licence may have been suspended, revoked, surrendered or allowed to expire, or the organisation may have been renamed.
         </li>
         <li>
           <strong>Downgraded to B</strong>: the Home Office has lowered the sponsor&apos;s rating, usually because of compliance concerns, and
           put it on an action plan.
         </li>
-        <li><strong>Back on register</strong>: an organisation we&apos;d recorded as removed is listed again.</li>
+        <li><strong>Back on register</strong>: an organisation we&apos;d recorded as removed is listed again (for example, after a suspension is lifted).</li>
+        <li><strong>Location changed</strong>: the town or county on the register changed, usually because the sponsor updated its address with the Home Office.</li>
+        <li><strong>Routes changed</strong>: the organisation gained or lost a licence for another visa route, such as Global Business Mobility.</li>
       </ul>
+
+      <h2>Websites and jobs</h2>
+      <p>
+        The register doesn&apos;t include websites. We look for each sponsor&apos;s website ourselves and only show one when we can confirm it
+        belongs to the organisation: its Companies House number or full registered name appears on the site, or it&apos;s listed on Wikidata
+        against that company number. Where the site uses a hiring platform we can read, we list its open roles and refresh them daily.
+      </p>
+      <p>
+        &ldquo;Licensed since&rdquo; is the date a sponsor first appeared on the register after we began tracking. The Home Office doesn&apos;t
+        publish licence grant dates, so for sponsors that were already listed when we started we say &ldquo;on the register since at least&rdquo;.
+      </p>
 
       <h2>What it can&apos;t tell you</h2>
       <p>

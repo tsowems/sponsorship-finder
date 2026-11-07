@@ -53,7 +53,8 @@ erDiagram
 | `status` | `active` or `removed` |
 | `in_baseline` | was already listed when tracking started |
 | `first_seen_at`, `last_seen_at`, `removed_at` | dates from register publications |
-| `company_number`, `website`, `careers_url` | **reserved for enrichment** (Companies House, website discovery); empty for now |
+| `routes` | every visa route held (text array); empty = not yet recorded |
+| `company_number`, `website`, `careers_url` | **deprecated, unused** (superseded by `sponsor_profiles`); dropped in a later migration |
 | `created_at`, `updated_at` | row timestamps |
 
 ### `sponsor_events`: the history
@@ -62,9 +63,30 @@ erDiagram
 |---|---|
 | `sponsor_id` → `sponsors.id` | |
 | `snapshot_id` → `register_snapshots.id` | which file revealed it |
-| `type` | enum `added`, `removed`, `readded`, `rating_changed` |
+| `type` | enum `added`, `removed`, `readded`, `rating_changed`, `location_changed`, `routes_changed` |
 | `old_value`, `new_value` | for `rating_changed`: e.g. `A` → `B`; for added/readded: the rating |
 | `occurred_at` | register publication date |
+
+## Enrichment
+
+### `sponsor_profiles`: one row per sponsor we've researched (or queued)
+
+| Column | Meaning |
+|---|---|
+| `status` | `queued`, `done` (website found), `not_found`, `error` |
+| `priority`, `requested_at` | queue order (10 watched, 5 viewed) |
+| `company_number`, `company_name`, `company_status`, `incorporated_on`, `sic_codes` | from Companies House (only with an API key) |
+| `website`, `website_source`, `website_verified_by` | the confirmed site and why we trust it |
+| `careers_url`, `ats_provider`, `ats_slug` | careers page and hiring platform |
+| `jobs_count`, `uk_jobs_count`, `jobs_checked_at` | summary of `jobs` |
+| `checked_at`, `next_check_at`, `attempts`, `error` | scheduling and failures |
+
+### `jobs`: open roles from hiring platforms
+
+Unique on `(sponsor_id, source, external_id)`. Rows not seen in the latest fetch are deleted, so this table only
+holds currently open roles. `is_uk` drives the "N open roles in the UK" count.
+
+See [Enrichment](09-enrichment.md) for how these are filled.
 
 ## Users and alerts
 

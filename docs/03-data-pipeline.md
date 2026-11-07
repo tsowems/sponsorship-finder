@@ -28,7 +28,8 @@ flowchart LR
 | `Type & Rating` | `Worker (A rating)` | Also `Worker (B rating)`, `Worker (A (Premium))`, `Worker (A (SME+))` |
 | `Route` | `Skilled Worker` | One row **per route**, so an organisation can appear several times |
 
-There is **no unique ID** per organisation, and **no reason** is ever given for removals.
+There is **no unique ID** per organisation, **no licence grant date**, and **no reason** is ever given for removals.
+We don't keep the files: each is downloaded, compared, and only the differences are stored.
 
 ## Step 1: find and download (`source.ts`)
 
@@ -88,9 +89,22 @@ A **pure function**: `diffRegister(existingSponsorsFromDb, incomingGroupedSponso
 |---|---|---|
 | `added` | key not in DB | `added` |
 | `readded` | key in DB with status `removed` | `readded` |
-| `ratingChanged` | active, rating differs | `rating_changed` (old → new) |
-| `detailsChanged` | active, name casing / county / merged-row count differs | *no event*, just updated |
+| `updated` + `rating` | active, rating differs | `rating_changed` (old → new) |
+| `updated` + `location` | county changed, **or** a same-name sponsor vanished from one town and appeared in another in the same file | `location_changed` ("Leeds" → "Bradford, West Yorkshire") |
+| `updated` + `routes` | the set of visa routes held changed | `routes_changed` (routes joined with ` \| `) |
+| `updated` only | name casing, merged-row count, first-time route fill | *no event*, just updated |
 | `removed` | active in DB, key not in file | `removed` |
+
+**Moves keep identity.** When exactly one sponsor with a given name disappears and exactly one appears elsewhere,
+we treat it as a move: the row keeps its `id`, **slug** (so URLs and Google rankings survive) and watchers; only its
+`key`, town and county change. Ambiguous cases (two same-name sponsors) stay as remove + add.
+
+**Routes.** Grouping collects every route row with the same name + town, so a Skilled Worker sponsor's
+`routes` might be `["Global Business Mobility: Senior or Specialist Worker", "Skilled Worker"]`. Sponsors stored
+before route tracking have `routes = '{}'`; the next import fills them silently (no events).
+
+**Bulk writes.** Updates go through one `UPDATE … FROM (VALUES …)` per 1,000 rows (`bulkUpdateSponsors`), so
+filling routes for all ~122k sponsors takes seconds, not minutes.
 
 Because it's pure (no DB), it's easy to test; see `register.test.ts`.
 
@@ -164,6 +178,7 @@ Each check is cheap: one small JSON request; the CSV is only downloaded when the
 - **We can't tell *why* a sponsor was removed.** Revoked, surrendered, expired and renamed all look the same.
   UI and emails always say "removed from the register", never "revoked".
 - **Renames look like remove + add.** Matching against Companies House numbers would fix this (future work).
+- **Suspended licences also disappear** from the register; a later "Back on register" often means a suspension was lifted.
 - **Two different companies with the same name in the same town** would merge. Rare, and indistinguishable
   without Companies House data.
-- **Town changes look like remove + add** (the key includes the town).
+- **Only unambiguous moves are detected.** If two same-name sponsors change at once, they show as remove + add.

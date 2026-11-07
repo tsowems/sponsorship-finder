@@ -1,4 +1,4 @@
-import { desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import {
   getDb,
   registerSnapshots,
@@ -7,7 +7,7 @@ import {
   sponsors,
   type NewSponsor,
 } from '@sponsors/db';
-import { diffRegister, type ExistingSponsor, type RegisterDiff } from './diff';
+import { diffRegister, ROUTE_SEPARATOR, type ExistingSponsor, type RegisterDiff } from './diff';
 import { groupSkilledWorkerSponsors, type RegisterSponsor } from './group';
 import { parseRegister, SKILLED_WORKER_ROUTE } from './parse';
 import { downloadRegister, getLatestRegisterSource, sha256 } from './source';
@@ -35,6 +35,9 @@ export interface DiffCounts {
   removed: number;
   readded: number;
   ratingChanged: number;
+  locationChanged: number;
+  routesChanged: number;
+  /** Updates with no event (name casing, merged-row count, first-time route fill). */
   detailsChanged: number;
 }
 
@@ -42,9 +45,36 @@ const countsOf = (d: RegisterDiff): DiffCounts => ({
   added: d.added.length,
   removed: d.removed.length,
   readded: d.readded.length,
-  ratingChanged: d.ratingChanged.length,
-  detailsChanged: d.detailsChanged.length,
+  ratingChanged: d.updated.filter((u) => u.rating).length,
+  locationChanged: d.updated.filter((u) => u.location).length,
+  routesChanged: d.updated.filter((u) => u.routes).length,
+  detailsChanged: d.updated.filter((u) => !u.rating && !u.location && !u.routes).length,
 });
+
+type Tx = Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0];
+
+/**
+ * Update many sponsors in one statement per 1,000 rows (UPDATE ... FROM VALUES).
+ * Row-by-row updates would take minutes over the network when e.g. routes are filled in for everyone.
+ */
+async function bulkUpdateSponsors(tx: Tx, rows: { id: number; key: string; sponsor: RegisterSponsor; reactivate: boolean }[]) {
+  for (const batch of chunk(rows)) {
+    const values: SQL[] = batch.map(
+      ({ id, key, sponsor: s, reactivate }) =>
+        sql`(${id}::int, ${key}::text, ${s.name}::text, ${s.town}::text, ${s.normalizedTown}::text, ${s.county}::text, ${s.rating}::text, ${s.ratingRaw}::text, ${s.entryCount}::int, ${s.routes.join('|')}::text, ${reactivate}::boolean)`,
+    );
+    await tx.execute(sql`
+      update sponsors s set
+        key = v.key, name = v.name, town = v.town, normalized_town = v.normalized_town, county = v.county,
+        rating = v.rating, rating_raw = v.rating_raw, entry_count = v.entry_count,
+        routes = string_to_array(v.routes, '|'),
+        status = case when v.reactivate then 'active'::sponsor_status else s.status end,
+        removed_at = case when v.reactivate then null else s.removed_at end,
+        updated_at = now()
+      from (values ${sql.join(values, sql`, `)}) as v(id, key, name, town, normalized_town, county, rating, rating_raw, entry_count, routes, reactivate)
+      where s.id = v.id`);
+  }
+}
 
 async function recordUnchanged(sourceUrl: string, hash: string, publishedAt: Date, totalRows: number, skilledWorkerRows: number, sponsorCount: number) {
   await getDb()
@@ -114,8 +144,10 @@ export async function runImport(opts: ImportOptions = {}): Promise<ImportResult>
       status: sponsors.status,
       rating: sponsors.rating,
       name: sponsors.name,
+      town: sponsors.town,
       county: sponsors.county,
       entryCount: sponsors.entryCount,
+      routes: sponsors.routes,
     })
     .from(sponsors);
   const isBaseline = !latest;
@@ -167,10 +199,14 @@ export async function runImport(opts: ImportOptions = {}): Promise<ImportResult>
         removedCount: counts.removed,
         readdedCount: counts.readded,
         ratingChangedCount: counts.ratingChanged,
+        locationChangedCount: counts.locationChanged,
+        routesChangedCount: counts.routesChanged,
       })
       .returning({ id: registerSnapshots.id });
 
-    const event = (sponsorId: number, type: 'added' | 'removed' | 'readded' | 'rating_changed', oldValue: string | null = null, newValue: string | null = null) => ({
+    type EventType = 'added' | 'removed' | 'readded' | 'rating_changed' | 'location_changed' | 'routes_changed';
+    const events: ReturnType<typeof event>[] = [];
+    const event = (sponsorId: number, type: EventType, oldValue: string | null = null, newValue: string | null = null) => ({
       sponsorId,
       snapshotId: snap.id,
       type,
@@ -192,6 +228,7 @@ export async function runImport(opts: ImportOptions = {}): Promise<ImportResult>
         rating: s.rating,
         ratingRaw: s.ratingRaw,
         entryCount: s.entryCount,
+        routes: s.routes,
         status: 'active',
         inBaseline: isBaseline,
         firstSeenAt: publishedAt,
@@ -199,34 +236,20 @@ export async function runImport(opts: ImportOptions = {}): Promise<ImportResult>
       }));
       const inserted = await tx.insert(sponsors).values(values).returning({ id: sponsors.id, rating: sponsors.rating });
       if (!isBaseline) {
-        await tx.insert(sponsorEvents).values(inserted.map((r) => event(r.id, 'added', null, r.rating)));
+        events.push(...inserted.map((r) => event(r.id, 'added', null, r.rating)));
       }
     }
 
-    // Back on the register
-    for (const { id, sponsor } of diff.readded) {
-      await tx
-        .update(sponsors)
-        .set({ status: 'active', removedAt: null, rating: sponsor.rating, ratingRaw: sponsor.ratingRaw, name: sponsor.name, county: sponsor.county, entryCount: sponsor.entryCount, updatedAt: sql`now()` })
-        .where(eq(sponsors.id, id));
-      await tx.insert(sponsorEvents).values(event(id, 'readded', null, sponsor.rating));
-    }
-
-    // Rating changes (e.g. A -> B)
-    for (const { id, from, to, sponsor } of diff.ratingChanged) {
-      await tx
-        .update(sponsors)
-        .set({ rating: to, ratingRaw: sponsor.ratingRaw, name: sponsor.name, county: sponsor.county, entryCount: sponsor.entryCount, updatedAt: sql`now()` })
-        .where(eq(sponsors.id, id));
-      await tx.insert(sponsorEvents).values(event(id, 'rating_changed', from, to));
-    }
-
-    // Cosmetic updates
-    for (const { id, sponsor } of diff.detailsChanged) {
-      await tx
-        .update(sponsors)
-        .set({ name: sponsor.name, county: sponsor.county, entryCount: sponsor.entryCount, updatedAt: sql`now()` })
-        .where(eq(sponsors.id, id));
+    // Back on the register, and changed details of listed sponsors (one bulk statement per 1,000)
+    await bulkUpdateSponsors(tx, [
+      ...diff.readded.map(({ id, sponsor }) => ({ id, key: sponsor.key, sponsor, reactivate: true })),
+      ...diff.updated.map(({ id, sponsor, newKey }) => ({ id, key: newKey ?? sponsor.key, sponsor, reactivate: false })),
+    ]);
+    for (const { id, sponsor } of diff.readded) events.push(event(id, 'readded', null, sponsor.rating));
+    for (const u of diff.updated) {
+      if (u.rating) events.push(event(u.id, 'rating_changed', u.rating.from, u.rating.to));
+      if (u.location) events.push(event(u.id, 'location_changed', u.location.from, u.location.to));
+      if (u.routes) events.push(event(u.id, 'routes_changed', u.routes.from.join(ROUTE_SEPARATOR), u.routes.to.join(ROUTE_SEPARATOR)));
     }
 
     // Everything still active was seen in this file
@@ -239,8 +262,10 @@ export async function runImport(opts: ImportOptions = {}): Promise<ImportResult>
         .update(sponsors)
         .set({ status: 'removed', removedAt: publishedAt, updatedAt: sql`now()` })
         .where(inArray(sponsors.id, ids));
-      await tx.insert(sponsorEvents).values(ids.map((id) => event(id, 'removed')));
+      events.push(...ids.map((id) => event(id, 'removed')));
     }
+
+    for (const batch of chunk(events)) await tx.insert(sponsorEvents).values(batch);
 
     return snap.id;
   });

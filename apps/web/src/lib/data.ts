@@ -2,10 +2,12 @@ import { cacheLife, cacheTag } from 'next/cache';
 import { and, asc, count, desc, eq, gte, ilike, inArray, sql, type SQL } from 'drizzle-orm';
 import {
   getDb,
+  jobs,
   normalizeName,
   normalizeTown,
   registerSnapshots,
   sponsorEvents,
+  sponsorProfiles,
   sponsors,
   type SponsorEventType,
 } from '@sponsors/db';
@@ -58,7 +60,19 @@ export async function getSponsorBySlug(slug: string) {
     .where(and(eq(sponsors.normalizedName, sponsor.normalizedName), sql`${sponsors.id} <> ${sponsor.id}`))
     .limit(10);
 
-  return { sponsor, events, trackingSince: tracking?.since ?? null, sameName };
+  const [profile] = await db.select().from(sponsorProfiles).where(eq(sponsorProfiles.sponsorId, sponsor.id));
+
+  // UK roles first, newest first
+  const openJobs = profile?.jobsCount
+    ? await db
+        .select({ id: jobs.id, title: jobs.title, location: jobs.location, department: jobs.department, url: jobs.url, isUk: jobs.isUk, remote: jobs.remote, postedAt: jobs.postedAt })
+        .from(jobs)
+        .where(eq(jobs.sponsorId, sponsor.id))
+        .orderBy(desc(jobs.isUk), sql`${jobs.postedAt} desc nulls last`, asc(jobs.title))
+        .limit(12)
+    : [];
+
+  return { sponsor, events, trackingSince: tracking?.since ?? null, sameName, profile: profile ?? null, jobs: openJobs };
 }
 
 // ---------------------------------------------------------------- search
@@ -118,7 +132,7 @@ export async function searchSponsors(input: SearchInput) {
 
 // ---------------------------------------------------------------- changes feed
 
-export type ChangeFilter = 'all' | 'added' | 'removed' | 'downgraded' | 'readded';
+export type ChangeFilter = 'all' | 'added' | 'removed' | 'downgraded' | 'readded' | 'moved' | 'routes';
 
 export async function getChanges(filter: ChangeFilter, page: number, pageSize = 50) {
   'use cache';
@@ -132,6 +146,8 @@ export async function getChanges(filter: ChangeFilter, page: number, pageSize = 
     removed: eq(sponsorEvents.type, 'removed'),
     readded: eq(sponsorEvents.type, 'readded'),
     downgraded: and(eq(sponsorEvents.type, 'rating_changed'), sql`${sponsorEvents.newValue} like 'B%'`),
+    moved: eq(sponsorEvents.type, 'location_changed'),
+    routes: eq(sponsorEvents.type, 'routes_changed'),
   };
   const where = typeFilter[filter];
 

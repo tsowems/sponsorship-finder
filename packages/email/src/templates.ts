@@ -94,7 +94,7 @@ export function alertEmail(opts: {
   }
   if (opts.watched.some((i) => i.change.startsWith('Removed'))) {
     const note =
-      'A sponsor can leave the register because its licence was revoked, surrendered or expired, or because it was renamed. The register doesn’t say which.';
+      'A sponsor can leave the register because its licence was suspended, revoked, surrendered or expired, or because it was renamed. The register doesn’t say which.';
     html += `<p style="font-size:13px;color:#64748b;margin-top:16px">${esc(note)}</p>`;
     text += `\n${note}\n`;
   }

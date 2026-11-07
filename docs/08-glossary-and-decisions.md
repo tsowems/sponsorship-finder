@@ -92,10 +92,22 @@ drizzle-orm 0.45 is tested against v3; v4 changed how parameter types are decide
 ### Repo-level secrets with `PROD_`/`STAGING_` prefixes
 GitHub Actions *environments* aren't available for private repos on the Free plan.
 
+### Verify every website before showing it
+A wrong website link is worse than none. Sites are only accepted when they show the company number or full
+registered name (or Wikidata ties them to the company number). See [Enrichment](09-enrichment.md).
+
+### "Licensed since" = first appearance on the register
+The Home Office doesn't publish grant dates (the register has five columns). Other sites show the date *they* first
+saw a company; we do the same but say "on the register since at least…" for sponsors listed before we started.
+
+### Moves keep the original slug
+A sponsor that changes town keeps its URL, so links, watchers and search rankings survive.
+
 ## Known limitations
 
 - Can't distinguish revoked / surrendered / expired / renamed.
-- Renames and town changes appear as remove + add.
+- Renames appear as remove + add (town changes are detected when unambiguous).
+- Website coverage for small businesses is low without a Companies House key, and still partial with one.
 - Same-name-same-town different companies would merge.
 - No acronyms/aliases in search ("PwC" doesn't find "PricewaterhouseCoopers LLP").
 - Pages can lag an import by up to ~1 hour (cache lifetime).

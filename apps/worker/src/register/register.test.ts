@@ -47,25 +47,80 @@ test('parseRegister rejects unexpected columns', () => {
   assert.throws(() => parseRegister('Name,City\nX,Y\n'), /missing expected columns/);
 });
 
+const existingRow = (o: Partial<ExistingSponsor> & Pick<ExistingSponsor, 'id' | 'key' | 'name' | 'town'>): ExistingSponsor => ({
+  status: 'active',
+  rating: 'A',
+  county: null,
+  entryCount: 1,
+  routes: ['Skilled Worker'],
+  ...o,
+});
+
 test('diffRegister detects added, removed, readded, rating and detail changes', () => {
   const incoming = groupSkilledWorkerSponsors(parseRegister(CSV));
-  const base = { county: null, entryCount: 1 };
   const existing: ExistingSponsor[] = [
-    { id: 1, key: '186 london limited|london', status: 'active', rating: 'A', name: '186 London Limited', ...base }, // entryCount 1 -> 2
-    { id: 2, key: 'smith and sons limited|leeds', status: 'active', rating: 'A', name: 'Smith & Sons Ltd', ...base, county: 'West Yorkshire' }, // A -> B
-    { id: 3, key: 'premium corp|bristol', status: 'removed', rating: 'A', name: 'Premium Corp', ...base }, // back
-    { id: 4, key: 'gone limited|york', status: 'active', rating: 'A', name: 'Gone Limited', ...base }, // removed
-    { id: 5, key: 'old limited|york', status: 'removed', rating: 'A', name: 'Old Limited', ...base }, // stays removed
+    existingRow({ id: 1, key: '186 london limited|london', name: '186 London Limited', town: 'London' }), // entryCount 1 -> 2
+    existingRow({ id: 2, key: 'smith and sons limited|leeds', name: 'Smith & Sons Ltd', town: 'Leeds', county: 'West Yorkshire' }), // A -> B
+    existingRow({ id: 3, key: 'premium corp|bristol', name: 'Premium Corp', town: 'Bristol', status: 'removed' }), // back
+    existingRow({ id: 4, key: 'gone limited|york', name: 'Gone Limited', town: 'York' }), // removed
+    existingRow({ id: 5, key: 'old limited|york', name: 'Old Limited', town: 'York', status: 'removed' }), // stays removed
   ];
   const d = diffRegister(existing, incoming);
   assert.deepEqual(d.added, []);
   assert.deepEqual(d.removed, [{ id: 4, key: 'gone limited|york' }]);
   assert.deepEqual(d.readded.map((r) => r.id), [3]);
-  assert.deepEqual(d.ratingChanged.map((r) => [r.id, r.from, r.to]), [[2, 'A', 'B']]);
-  assert.deepEqual(d.detailsChanged.map((r) => r.id), [1]);
+  const byId = new Map(d.updated.map((u) => [u.id, u]));
+  assert.deepEqual(byId.get(2)?.rating, { from: 'A', to: 'B' });
+  assert.equal(byId.get(2)?.location, undefined);
+  assert.ok(byId.has(1) && !byId.get(1)!.rating && !byId.get(1)!.location && !byId.get(1)!.routes, 'cosmetic only');
 
   const fresh = diffRegister([], incoming);
   assert.equal(fresh.added.length, 3);
+});
+
+test('a sponsor that changes town is a location change, not remove + add', () => {
+  const incoming = groupSkilledWorkerSponsors(
+    parseRegister('Organisation Name,Town/City,County,Type & Rating,Route\nAcme Ltd,Bradford,West Yorkshire,Worker (A rating),Skilled Worker\n'),
+  );
+  const d = diffRegister([existingRow({ id: 9, key: 'acme limited|leeds', name: 'Acme Ltd', town: 'Leeds' })], incoming);
+  assert.deepEqual(d.added, []);
+  assert.deepEqual(d.removed, []);
+  assert.equal(d.updated.length, 1);
+  assert.equal(d.updated[0].id, 9);
+  assert.equal(d.updated[0].newKey, 'acme limited|bradford');
+  assert.deepEqual(d.updated[0].location, { from: 'Leeds', to: 'Bradford, West Yorkshire' });
+});
+
+test('ambiguous moves (two same-name sponsors) stay as remove + add', () => {
+  const incoming = groupSkilledWorkerSponsors(
+    parseRegister(
+      'Organisation Name,Town/City,County,Type & Rating,Route\nAcme Ltd,Bradford,,Worker (A rating),Skilled Worker\nAcme Ltd,Hull,,Worker (A rating),Skilled Worker\n',
+    ),
+  );
+  const d = diffRegister([existingRow({ id: 9, key: 'acme limited|leeds', name: 'Acme Ltd', town: 'Leeds' })], incoming);
+  assert.equal(d.added.length, 2);
+  assert.equal(d.removed.length, 1);
+});
+
+test('county change is a location change; routes are tracked across all rows', () => {
+  const incoming = groupSkilledWorkerSponsors(
+    parseRegister(
+      'Organisation Name,Town/City,County,Type & Rating,Route\nAcme Ltd,Leeds,West Yorkshire,Worker (A rating),Skilled Worker\nAcme Ltd,Leeds,West Yorkshire,Worker (A rating),Global Business Mobility: Senior or Specialist Worker\n',
+    ),
+  );
+  const sponsor = incoming.get('acme limited|leeds')!;
+  assert.deepEqual(sponsor.routes, ['Global Business Mobility: Senior or Specialist Worker', 'Skilled Worker']);
+  assert.equal(sponsor.entryCount, 1); // only Skilled Worker rows count as entries
+
+  const d = diffRegister([existingRow({ id: 9, key: 'acme limited|leeds', name: 'Acme Ltd', town: 'Leeds' })], incoming);
+  assert.deepEqual(d.updated[0].location, { from: 'Leeds', to: 'Leeds, West Yorkshire' });
+  assert.deepEqual(d.updated[0].routes, { from: ['Skilled Worker'], to: sponsor.routes });
+
+  // Before route tracking existed, routes are empty: fill silently, no event
+  const silent = diffRegister([existingRow({ id: 9, key: 'acme limited|leeds', name: 'Acme Ltd', town: 'Leeds', county: 'West Yorkshire', routes: [] })], incoming);
+  assert.equal(silent.updated.length, 1);
+  assert.equal(silent.updated[0].routes, undefined);
+  assert.equal(silent.updated[0].location, undefined);
 });
 
 test('grouping is independent of row order (a reshuffled register is not a change)', () => {
@@ -74,8 +129,8 @@ test('grouping is independent of row order (a reshuffled register is not a chang
   const b = groupSkilledWorkerSponsors([...rows].reverse());
   assert.deepEqual([...b.entries()].sort(), [...a.entries()].sort());
   const d = diffRegister(
-    [...a.values()].map((s, i) => ({ id: i, key: s.key, status: 'active', rating: s.rating, name: s.name, county: s.county, entryCount: s.entryCount })),
+    [...a.values()].map((s, i) => existingRow({ id: i, key: s.key, rating: s.rating, name: s.name, town: s.town, county: s.county, entryCount: s.entryCount, routes: s.routes })),
     b,
   );
-  assert.equal(d.added.length + d.removed.length + d.ratingChanged.length + d.detailsChanged.length, 0);
+  assert.equal(d.added.length + d.removed.length + d.updated.length, 0);
 });

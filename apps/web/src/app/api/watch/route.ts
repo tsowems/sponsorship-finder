@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { getDb, sponsors, watches } from '@sponsors/db';
+import { getDb, PROFILE_PRIORITY, requestProfiles, sponsors, watches } from '@sponsors/db';
 import { getCurrentUser, isSameOrigin, json } from '@/lib/session';
 
 const MAX_WATCHES = 500;
@@ -37,6 +37,8 @@ export async function POST(request: Request) {
   if (count >= MAX_WATCHES) return json({ error: `You can watch up to ${MAX_WATCHES} companies` }, 400);
 
   await db.insert(watches).values({ userId: user.id, sponsorId }).onConflictDoNothing();
+  // Watched companies jump the queue for website + jobs lookup.
+  await requestProfiles(db, [sponsorId], PROFILE_PRIORITY.watched);
   return json({ watching: true });
 }
 

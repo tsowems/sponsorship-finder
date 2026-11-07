@@ -53,6 +53,7 @@ Repo → **Settings → Secrets and variables → Actions**.
 | `STAGING_DATABASE_URL` | Neon `staging` pooled URL |
 | `STAGING_BETTER_AUTH_SECRET` | staging secret from step 2 |
 | `RESEND_API_KEY` | from Resend (optional until you have it; emails are skipped/printed without it) |
+| `COMPANIES_HOUSE_API_KEY` | optional, recommended: free REST key from developer.company-information.service.gov.uk; improves website matching |
 
 **Variables** tab → New repository variable:
 
@@ -158,3 +159,6 @@ When staging looks right:
 | `ci.yml` | push to `staging`, PR into `main` | typecheck, lint, tests, migrate staging DB, build |
 | `migrate-production.yml` | push to `main` that changes migrations | applies migrations to production |
 | `register-import.yml` | weekdays every 2h 06:15–18:15 UTC, weekends 12:15 UTC, or manually | imports a changed register, sends alert emails |
+| `enrich.yml` | every 4 hours (:40), or manually | finds websites, careers pages and jobs for 150 sponsors; refreshes job lists |
+
+Approximate Actions usage (private repo, 2,000 free minutes): import ~300, enrichment ~600, CI ~100 minutes/month.
