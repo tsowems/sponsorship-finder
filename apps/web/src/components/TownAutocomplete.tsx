@@ -102,18 +102,16 @@ export function TownAutocomplete({ defaultValue, className }: { defaultValue?: s
         className={className}
       />
       {showList && (
-        <ul id={listId} role="listbox" className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-lg">
+        <ul id={listId} role="listbox" className="absolute top-full right-0 left-0 z-20 mt-1 max-h-[min(55vh,22rem)] overflow-y-auto overscroll-contain rounded-lg border border-slate-200 bg-white text-left shadow-lg">
           {towns.map((t, i) => (
             <li
               key={t.town}
               id={`${listId}-${i}`}
               role="option"
               aria-selected={i === active}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                choose(t);
-              }}
-              onPointerEnter={() => setActive(i)}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => choose(t)}
+              onPointerEnter={(e) => e.pointerType === 'mouse' && setActive(i)}
               className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-2 ${i === active ? 'bg-indigo-50' : ''}`}
             >
               <span className="truncate font-medium text-slate-900">{t.town}</span>

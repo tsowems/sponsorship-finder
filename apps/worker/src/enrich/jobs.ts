@@ -114,7 +114,59 @@ async function recruitee(slug: string): Promise<FetchedJob[] | null> {
   })) ?? null;
 }
 
-const FETCHERS: Partial<Record<AtsProvider, (slug: string) => Promise<FetchedJob[] | null>>> = { greenhouse, lever, ashby, workable, recruitee };
+/** "Posted Today" / "Posted Yesterday" / "Posted 3 Days Ago" / "Posted 30+ Days Ago" → approximate date */
+export function workdayPostedOn(text: string | undefined, now = new Date()): Date | null {
+  if (!text) return null;
+  const day = 24 * 60 * 60 * 1000;
+  if (/today/i.test(text)) return now;
+  if (/yesterday/i.test(text)) return new Date(now.getTime() - day);
+  const m = text.match(/(\d+)\+?\s+days?/i);
+  return m ? new Date(now.getTime() - Number(m[1]) * day) : null;
+}
+
+/** Location from Workday's path: "/job/London/Software-Engineer_R123" → "London" ("US-CA-Santa-Clara" → "US CA Santa Clara"). */
+export function workdayLocation(locationsText: string | undefined, externalPath: string): string | null {
+  if (locationsText && !/^\d+ locations?$/i.test(locationsText)) return locationsText;
+  const seg = externalPath.split('/')[2];
+  return seg ? decodeURIComponent(seg).replace(/-/g, ' ') : locationsText ?? null;
+}
+
+const WORKDAY_PAGE = 20; // Workday's maximum page size
+const WORKDAY_MAX = 200; // be polite: big employers can have thousands of openings
+
+async function workday(slug: string): Promise<FetchedJob[] | null> {
+  const m = slug.match(/^([a-z0-9-]+)\.(wd\d+)\/([A-Za-z0-9_-]+)$/);
+  if (!m) return null;
+  const [, tenant, wd, site] = m;
+  const host = `https://${tenant}.${wd}.myworkdayjobs.com`;
+  const out: FetchedJob[] = [];
+  let total = Infinity; // Workday only reports the total on the first page
+  for (let offset = 0; offset < Math.min(WORKDAY_MAX, total); offset += WORKDAY_PAGE) {
+    const j = await fetchJson<{ total?: number; jobPostings?: { title: string; externalPath: string; locationsText?: string; postedOn?: string; bulletFields?: string[] }[] }>(
+      `${host}/wday/cxs/${tenant}/${site}/jobs`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ appliedFacets: {}, limit: WORKDAY_PAGE, offset, searchText: '' }) },
+    );
+    if (!j?.jobPostings) return offset === 0 ? null : out;
+    if (offset === 0 && typeof j.total === 'number') total = j.total;
+    for (const x of j.jobPostings) {
+      const loc = workdayLocation(x.locationsText, x.externalPath);
+      out.push({
+        externalId: x.bulletFields?.[0] ?? x.externalPath,
+        title: clean(x.title),
+        location: loc,
+        department: null,
+        url: `${host}/${site}${x.externalPath}`,
+        isUk: isUkLocation(loc) || /\b(GB|UK|United-Kingdom)\b/.test(x.externalPath),
+        remote: /remote/i.test(loc ?? ''),
+        postedAt: workdayPostedOn(x.postedOn),
+      });
+    }
+    if (j.jobPostings.length < WORKDAY_PAGE) break;
+  }
+  return out;
+}
+
+const FETCHERS: Partial<Record<AtsProvider, (slug: string) => Promise<FetchedJob[] | null>>> = { greenhouse, lever, ashby, workable, recruitee, workday };
 
 /** Current openings on a hiring platform, or null if the board doesn't exist / can't be read. */
 export async function fetchJobs(provider: AtsProvider, slug: string): Promise<FetchedJob[] | null> {
