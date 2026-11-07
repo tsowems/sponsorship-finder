@@ -1,5 +1,5 @@
 {
-  "name": "sponsor-finder",
+  "name": "sponsorship-hunter",
   "private": true,
   "workspaces": [
     "packages/*",
@@ -13,7 +13,8 @@
     "import": "npm run import -w worker",
     "worker": "npm run start -w worker",
     "test": "npm test -w worker",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:studio": "npm run studio -w @sponsors/db"
   },
   "devDependencies": {
     "postgres": "^3.4.9"

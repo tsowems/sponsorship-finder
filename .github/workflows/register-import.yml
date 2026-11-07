@@ -71,4 +71,5 @@ jobs:
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          SITE_NAME: ${{ vars.SITE_NAME }}
         run: npm run import -- ${{ inputs.alerts == false && '--no-alerts' || '' }}

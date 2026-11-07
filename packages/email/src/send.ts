@@ -17,7 +17,7 @@ export interface SendResult {
  */
 export async function sendEmail(msg: EmailMessage): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM || 'Sponsor Finder <onboarding@resend.dev>';
+  const from = process.env.EMAIL_FROM || 'Sponsorship Hunter <onboarding@resend.dev>';
 
   if (!apiKey) {
     console.log(

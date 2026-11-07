@@ -7,5 +7,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/sponsors`, changeFrequency: 'daily' },
     { url: `${SITE_URL}/changes`, changeFrequency: 'daily' },
     { url: `${SITE_URL}/about`, changeFrequency: 'monthly' },
+    { url: `${SITE_URL}/privacy`, changeFrequency: 'yearly' },
   ];
 }

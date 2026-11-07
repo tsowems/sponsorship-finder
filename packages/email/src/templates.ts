@@ -1,7 +1,7 @@
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-const SITE = () => process.env.SITE_NAME || 'Sponsor Finder';
+const SITE = () => process.env.SITE_NAME || 'Sponsorship Hunter';
 
 function layout(title: string, body: string, footer = ''): string {
   return `<!doctype html><html><body style="margin:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
