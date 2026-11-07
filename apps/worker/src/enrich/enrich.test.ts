@@ -9,10 +9,16 @@ import { isUkLocation } from './location';
 import { canonicalCompanyNumber, companyNumbersOnPage, isParkedPage, verifyPage } from './verify';
 
 test('candidate domains drop company-type words and skip generic names', () => {
-  assert.deepEqual(candidateDomains('acme robotics limited').slice(0, 4), ['acmerobotics.co.uk', 'acmerobotics.com', 'acmerobotics.uk', 'acme-robotics.co.uk']);
+  assert.deepEqual(candidateDomains('acme robotics limited').slice(0, 4), ['acmerobotics.co.uk', 'acme-robotics.co.uk', 'acmerobotics.com', 'acme-robotics.com']);
   assert.deepEqual(candidateDomains('care services limited'), []); // too generic to guess safely
   assert.deepEqual(candidateDomains('abc ltd'), []); // too short
   assert.ok(candidateDomains('monzo bank limited').includes('monzobank.co.uk'));
+  // Small firms keep the legal suffix and use other endings: "09 Care Limited" → 09carelimited.co
+  const nine = candidateDomains('09 care limited');
+  assert.ok(nine.includes('09carelimited.co'), nine.join(' '));
+  assert.ok(nine.indexOf('09care.co.uk') < nine.indexOf('09carelimited.co'), 'usual forms are tried first');
+  assert.ok(candidateDomains('acme robotics llp').every((d) => !d.includes('limited')), 'only add "limited" when the name has it');
+  assert.ok(candidateDomains('acme robotics limited').length <= 30);
   // "Acme Robotics Ltd t/a Acme Shop" normalises to "... t a acme shop": guess from the legal name
   assert.equal(candidateDomains('acme robotics limited t a acme shop')[0], 'acmerobotics.co.uk');
 });
