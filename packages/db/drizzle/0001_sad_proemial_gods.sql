@@ -1,0 +1,1 @@
+ALTER TABLE "register_snapshots" ADD COLUMN "has_changes" boolean DEFAULT true NOT NULL;

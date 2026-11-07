@@ -1,0 +1,21 @@
+{
+  "name": "sponsor-finder",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "db:generate": "npm run generate -w @sponsors/db",
+    "db:migrate": "npm run migrate -w @sponsors/db",
+    "import": "npm run import -w worker",
+    "worker": "npm run start -w worker",
+    "test": "npm test -w worker",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "postgres": "^3.4.9"
+  }
+}

@@ -1,0 +1,1 @@
+CREATE INDEX "sponsors_name_prefix_idx" ON "sponsors" USING btree ("normalized_name" text_pattern_ops);
