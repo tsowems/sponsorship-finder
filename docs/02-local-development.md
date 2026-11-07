@@ -37,6 +37,7 @@ All variables live in the root `.env` (git-ignored). `.env.example` is the templ
 | `SITE_NAME` | web, worker | no | Brand name on the site and in emails (default "Sponsorship Hunter") |
 | `CONTACT_EMAIL` | web | no | Address shown on `/privacy` (default `privacy@sponsorshiphunter.com`) |
 | `SITE_ENV` | web | no | Set to `staging` to force `noindex` (Vercel previews do this automatically via `VERCEL_ENV`) |
+| `COMPANIES_HOUSE_API_KEY` | worker | no | Better website matching (company numbers). Free key |
 | `DB_POOL_MAX` | web, worker | no | Max Postgres connections per process (default 5) |
 
 Generate a secret:
@@ -60,6 +61,8 @@ Run from the **repo root** unless noted.
 | `npm run import -- --force` | Skip the "already imported" and "too many removals" safety checks |
 | `npm run import -- --no-alerts` | Import without sending alert emails |
 | `npm run alerts -w worker` | Send any alert emails that haven't been sent yet |
+| `npm run enrich` | Find websites/careers/jobs for up to 100 sponsors, refresh due job boards |
+| `npm run enrich -- --sponsor <slug> --dry-run` | Research one company and print what was found, without saving |
 | `npm run worker` | Long-running scheduler (checks hourly). Only needed if you self-host instead of using GitHub Actions |
 | `npm test` | Unit tests (`apps/worker/src/**/*.test.ts`) |
 | `npm run typecheck` | `tsc --noEmit` in every workspace |

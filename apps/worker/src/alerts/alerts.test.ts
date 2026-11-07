@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildUserAlerts, MAX_ITEMS_PER_SEARCH, type SearchMatch } from './build';
+import { buildUserAlerts, describeChange, describeRoutes, MAX_ITEMS_PER_SEARCH, type SearchMatch } from './build';
 
 const SITE = 'https://example.test';
 
@@ -38,4 +38,12 @@ test('caps long saved-search lists and links to the rest', () => {
 
 test('no alert for users with nothing to report', () => {
   assert.deepEqual(buildUserAlerts([], [], SITE), []);
+});
+
+test('describes location and route changes', () => {
+  assert.equal(describeChange({ type: 'location_changed', oldValue: 'Leeds', newValue: 'Bradford, West Yorkshire' }).change, 'Location changed from Leeds to Bradford, West Yorkshire');
+  assert.equal(
+    describeRoutes('Creative Worker | Skilled Worker', 'Global Business Mobility: Senior or Specialist Worker | Skilled Worker'),
+    'Visa routes changed: now also Global Business Mobility: Senior or Specialist Worker; no longer Creative Worker',
+  );
 });

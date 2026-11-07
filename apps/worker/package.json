@@ -8,7 +8,8 @@
     "start": "tsx --env-file-if-exists=../../.env src/index.ts",
     "test": "tsx --test src/**/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "alerts": "tsx --env-file-if-exists=../../.env src/cli/alerts.ts"
+    "alerts": "tsx --env-file-if-exists=../../.env src/cli/alerts.ts",
+    "enrich": "tsx --env-file-if-exists=../../.env src/cli/enrich.ts"
   },
   "dependencies": {
     "@sponsors/db": "*",

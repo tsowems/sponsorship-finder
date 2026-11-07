@@ -16,7 +16,8 @@ If you're new to the repo, read these in order. Each one builds on the last.
 | 6 | [Accounts and alerts](06-auth-and-alerts.md) | Sign-in (Better Auth), watches, saved searches, alert emails, unsubscribe, security |
 | 7 | [Deployment](../DEPLOYMENT.md) | Vercel, Neon branches, GitHub Actions, staging → main workflow |
 | 8 | [How-to recipes](07-how-to.md) | Step-by-step guides for common changes |
-| 9 | [Domain glossary and decisions](08-glossary-and-decisions.md) | Visa/sponsor terms, why things are built this way, known limitations, ideas for later |
+| 9 | [Websites, careers pages and jobs](09-enrichment.md) | How we find and verify company websites, careers pages and open roles |
+| 10 | [Domain glossary and decisions](08-glossary-and-decisions.md) | Visa/sponsor terms, why things are built this way, known limitations, ideas for later |
 
 ## Quick reference
 
@@ -40,6 +41,7 @@ apps/web/src/components/   React components
 apps/web/src/lib/          data queries, auth, helpers
 apps/worker/src/register/  register download, parse, group, diff, import
 apps/worker/src/alerts/    alert email building + sending
+apps/worker/src/enrich/    website, careers page and jobs discovery
 packages/db/src/           database schema, connection, name normalisation
 packages/db/drizzle/       SQL migrations (generated; never edit by hand once applied)
 packages/email/src/        email sending, templates, unsubscribe tokens

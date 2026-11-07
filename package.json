@@ -10,11 +10,12 @@
     "build": "npm run build -w web",
     "db:generate": "npm run generate -w @sponsors/db",
     "db:migrate": "npm run migrate -w @sponsors/db",
-    "import": "npm run import -w worker",
-    "worker": "npm run start -w worker",
+    "import": "npm run import -w worker --",
+    "worker": "npm run start -w worker --",
     "test": "npm test -w worker",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "db:studio": "npm run studio -w @sponsors/db"
+    "db:studio": "npm run studio -w @sponsors/db",
+    "enrich": "npm run enrich -w worker --"
   },
   "devDependencies": {
     "postgres": "^3.4.9"

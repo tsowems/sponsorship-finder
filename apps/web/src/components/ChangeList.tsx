@@ -2,6 +2,16 @@ import Link from 'next/link';
 import type { ChangeRow } from '@/lib/data';
 import { dayKey, formatLongDate } from '@/lib/format';
 
+/** "Routes: + Global Business Mobility, − Creative Worker" */
+export function describeRoutes(oldValue: string | null, newValue: string | null) {
+  const split = (v: string | null) => (v ? v.split(' | ').filter(Boolean) : []);
+  const before = new Set(split(oldValue));
+  const after = new Set(split(newValue));
+  const short = (r: string) => r.replace(/^Global Business Mobility: /, 'GBM: ');
+  const parts = [...[...after].filter((r) => !before.has(r)).map((r) => `+ ${short(r)}`), ...[...before].filter((r) => !after.has(r)).map((r) => `− ${short(r)}`)];
+  return `Routes: ${parts.join(', ') || 'changed'}`;
+}
+
 export function describeEvent(e: { type: string; oldValue: string | null; newValue: string | null }) {
   switch (e.type) {
     case 'added':
@@ -14,6 +24,10 @@ export function describeEvent(e: { type: string; oldValue: string | null; newVal
       return e.newValue?.startsWith('B')
         ? { label: `Downgraded ${e.oldValue} → ${e.newValue}`, tone: 'amber' as const }
         : { label: `Rating ${e.oldValue} → ${e.newValue}`, tone: 'sky' as const };
+    case 'location_changed':
+      return { label: `Moved to ${e.newValue}`, tone: 'slate' as const };
+    case 'routes_changed':
+      return { label: describeRoutes(e.oldValue, e.newValue), tone: 'slate' as const };
     default:
       return { label: e.type, tone: 'slate' as const };
   }

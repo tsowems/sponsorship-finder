@@ -14,13 +14,15 @@ const TABS: { id: ChangeFilter; label: string }[] = [
   { id: 'removed', label: 'Removed' },
   { id: 'downgraded', label: 'Downgraded to B' },
   { id: 'readded', label: 'Back on register' },
+  { id: 'moved', label: 'Location changed' },
+  { id: 'routes', label: 'Routes changed' },
 ];
 
 const readFilter = (v: string | undefined): ChangeFilter => (TABS.some((t) => t.id === v) ? (v as ChangeFilter) : 'all');
 
 export const metadata: Metadata = {
   title: 'Latest changes to the UK sponsor register',
-  description: 'New Skilled Worker visa sponsors, sponsors removed from the register, and sponsors downgraded to a B rating, updated daily.',
+  description: 'New Skilled Worker visa sponsors, sponsors removed from the register, downgrades to a B rating, location and visa-route changes, updated daily.',
   alternates: { canonical: '/changes' },
 };
 

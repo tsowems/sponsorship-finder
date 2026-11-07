@@ -1,0 +1,55 @@
+# Finds sponsors' websites, careers pages and open roles, and refreshes job lists.
+# Companies people view or watch are queued first; the rest are worked through in the background.
+name: Enrich sponsors
+
+on:
+  schedule:
+    # Every 4 hours, offset from the register import.
+    - cron: '40 1-23/4 * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which database
+        type: choice
+        options: [production, staging]
+        default: production
+      limit:
+        description: Sponsors to check this run
+        default: '150'
+
+concurrency:
+  group: enrich-${{ inputs.target || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ (inputs.target || 'production') == 'production' && 'main' || 'staging' }}
+
+      - name: Select database
+        env:
+          TARGET: ${{ inputs.target || 'production' }}
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          if [ "$TARGET" = production ]; then V="$PROD_DATABASE_URL"; else V="$STAGING_DATABASE_URL"; fi
+          if [ -z "$V" ]; then echo "::error::${TARGET^^}_DATABASE_URL is not set"; exit 1; fi
+          echo "DATABASE_URL=$V" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Find websites, careers pages and jobs
+        env:
+          # Optional but recommended: much better website matching. Free key from
+          # https://developer.company-information.service.gov.uk/
+          COMPANIES_HOUSE_API_KEY: ${{ secrets.COMPANIES_HOUSE_API_KEY }}
+        run: npm run enrich -w worker -- --limit ${{ inputs.limit || '150' }} --concurrency 8

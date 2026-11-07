@@ -29,3 +29,4 @@ export async function closeDb(): Promise<void> {
     globalForDb.__sponsorsDb = undefined;
   }
 }
+export * from './queue';

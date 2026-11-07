@@ -12,6 +12,8 @@ export interface RegisterSponsor {
   rating: string;
   ratingRaw: string;
   entryCount: number;
+  /** Every route this organisation holds (from rows of any route with the same name + town), sorted. */
+  routes: string[];
 }
 
 const isShouty = (s: string) => s === s.toUpperCase() && /[A-Z]/.test(s);
@@ -34,6 +36,17 @@ function pickRating(rows: { rating: string; raw: string }[]): { rating: string; 
 
 /** Keep Skilled Worker rows and merge rows that are the same organisation (same normalised name + town). */
 export function groupSkilledWorkerSponsors(rows: RegisterRow[]): Map<string, RegisterSponsor> {
+  // Routes are collected across *all* rows, so we know e.g. that a Skilled Worker sponsor also
+  // holds a Global Business Mobility licence.
+  const routesByKey = new Map<string, Set<string>>();
+  for (const row of rows) {
+    if (!row.name || !row.route) continue;
+    const k = `${normalizeName(row.name)}|${normalizeTown(row.town)}`;
+    let set = routesByKey.get(k);
+    if (!set) routesByKey.set(k, (set = new Set()));
+    set.add(row.route);
+  }
+
   const groups = new Map<string, { normalizedName: string; normalizedTown: string; rows: RegisterRow[] }>();
   for (const row of rows) {
     if (row.route !== SKILLED_WORKER_ROUTE || !row.name) continue;
@@ -59,6 +72,7 @@ export function groupSkilledWorkerSponsors(rows: RegisterRow[]): Map<string, Reg
       rating: rating.rating,
       ratingRaw: rating.raw,
       entryCount: g.rows.length,
+      routes: [...(routesByKey.get(key) ?? [SKILLED_WORKER_ROUTE])].sort(byText),
     });
   }
   return result;

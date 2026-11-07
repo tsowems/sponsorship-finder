@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RatingBadge, StatusBadge } from '@/components/Badges';
 import { EventPill } from '@/components/ChangeList';
+import { ProfileRequest } from '@/components/ProfileRequest';
 import { WatchButton } from '@/components/WatchButton';
 import { getSponsorBySlug } from '@/lib/data';
 import { formatDate } from '@/lib/format';
@@ -13,6 +14,8 @@ import { SITE_URL } from '@/lib/site';
  * route is required to be static. Unknown slugs render on first request and are then cached.
  */
 export const ensureStatic = 'navigation';
+/** Deliberately blocking: we want the full page (for SEO), not an instant placeholder shell. */
+export const instant = false;
 
 export async function generateStaticParams() {
   // Pages are generated on demand; one placeholder satisfies the build requirement.
@@ -38,12 +41,16 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const { slug } = await params;
   const data = await getSponsorBySlug(slug);
   if (!data) notFound();
-  const { sponsor, events, trackingSince, sameName } = data;
+  const { sponsor, events, trackingSince, sameName, profile, jobs } = data;
   const active = sponsor.status === 'active';
   const downgraded = sponsor.rating.startsWith('B');
 
-  const companiesHouse = `https://find-and-update.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(sponsor.name)}`;
-  const webSearch = `https://www.google.com/search?q=${encodeURIComponent(`"${sponsor.name}" ${sponsor.town} careers`)}`;
+  const companiesHouse = profile?.companyNumber
+    ? `https://find-and-update.company-information.service.gov.uk/company/${encodeURIComponent(profile.companyNumber)}`
+    : `https://find-and-update.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(sponsor.name)}`;
+  const webSearch = `https://www.google.com/search?q=${encodeURIComponent(`"${sponsor.name}" ${sponsor.town}`)}`;
+  const routes = sponsor.routes.length ? sponsor.routes : ['Skilled Worker'];
+  const researched = profile && profile.status !== 'queued';
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -51,7 +58,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
     name: sponsor.name,
     url: `${SITE_URL}/sponsors/${sponsor.slug}`,
     address: { '@type': 'PostalAddress', addressLocality: sponsor.town, addressRegion: sponsor.county ?? undefined, addressCountry: 'GB' },
-    ...(sponsor.website ? { sameAs: [sponsor.website] } : {}),
+    ...(profile?.website ? { sameAs: [profile.website] } : {}),
   };
 
   return (
@@ -74,6 +81,24 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
           {sponsor.town}
           {sponsor.county ? `, ${sponsor.county}` : ''}
         </p>
+        <dl className="flex flex-wrap gap-x-8 gap-y-2 pt-1 text-sm">
+          <div>
+            <dt className="text-slate-500">{sponsor.inBaseline ? 'On the register since' : 'Licensed since'}</dt>
+            <dd className="font-medium text-slate-900">
+              {sponsor.inBaseline ? `at least ${formatDate(sponsor.firstSeenAt)}` : formatDate(sponsor.firstSeenAt)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Visa routes</dt>
+            <dd className="font-medium text-slate-900">{routes.join(' · ')}</dd>
+          </div>
+          {profile?.incorporatedOn && (
+            <div>
+              <dt className="text-slate-500">Incorporated</dt>
+              <dd className="font-medium text-slate-900">{formatDate(profile.incorporatedOn)}</dd>
+            </div>
+          )}
+        </dl>
       </header>
 
       <section
@@ -94,15 +119,86 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
         )}
         {!active && (
           <p className="text-slate-800">
-            <strong>No longer on the register</strong> since {formatDate(sponsor.removedAt ?? sponsor.lastSeenAt)}. A licence can disappear from the
-            register because it was revoked, surrendered by the employer or expired, or because the organisation was renamed. The
-            register doesn&apos;t say which.
+            <strong>No longer on the register</strong> since {formatDate(sponsor.removedAt ?? sponsor.lastSeenAt)}. A sponsor can disappear from the
+            register because its licence was suspended, revoked, surrendered by the employer or expired, or because the organisation was
+            renamed. The register doesn&apos;t say which.
           </p>
         )}
       </section>
 
       <div className="grid gap-8 md:grid-cols-3">
-        <section className="space-y-3 md:col-span-2">
+        <div className="space-y-8 md:col-span-2">
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Website and jobs</h2>
+          {!researched && <ProfileRequest sponsorId={sponsor.id} />}
+          {profile?.website ? (
+            <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
+              <div className="flex flex-wrap gap-3">
+                <a href={profile.website} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+                  Visit {new URL(profile.website).hostname.replace(/^www\./, '')} ↗
+                </a>
+                {profile.careersUrl && (
+                  <a href={profile.careersUrl} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                    Careers page ↗
+                  </a>
+                )}
+              </div>
+              {jobs.length > 0 ? (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                    {profile.ukJobsCount > 0 ? `${profile.ukJobsCount} open role${profile.ukJobsCount === 1 ? '' : 's'} in the UK` : 'Open roles (none listed in the UK)'}
+                    {profile.jobsCount > profile.ukJobsCount && <span className="font-normal text-slate-500"> · {profile.jobsCount} worldwide</span>}
+                  </h3>
+                  <ul className="divide-y divide-slate-100 rounded-md border border-slate-100">
+                    {jobs.map((j) => (
+                      <li key={j.id}>
+                        <a href={j.url} rel="noopener nofollow" target="_blank" className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-3 py-2.5 hover:bg-slate-50">
+                          <span className="font-medium text-slate-900">{j.title}</span>
+                          <span className="text-sm text-slate-500">
+                            {[j.location, j.department].filter(Boolean).join(' · ')}
+                            {j.postedAt ? ` · posted ${formatDate(j.postedAt)}` : ''}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                  {profile.jobsCount > jobs.length && profile.careersUrl && (
+                    <a href={profile.careersUrl} rel="noopener nofollow" target="_blank" className="mt-2 inline-block text-sm text-indigo-700 hover:underline">
+                      See all {profile.jobsCount} roles on their careers site ↗
+                    </a>
+                  )}
+                  <p className="mt-2 text-xs text-slate-500">
+                    Listed on the company&apos;s own hiring page{profile.jobsCheckedAt ? `, checked ${formatDate(profile.jobsCheckedAt)}` : ''}. Not every role
+                    is eligible for sponsorship: check the job advert or ask the employer.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-600">
+                  {profile.careersUrl
+                    ? 'Open roles are listed on their careers page.'
+                    : 'We couldn’t find a careers page on their website. Try their site’s “Careers” or “Jobs” section, or ask them directly.'}
+                </p>
+              )}
+              <p className="text-xs text-slate-500">
+                {profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
+                  ? 'Website confirmed using the company’s registration number.'
+                  : 'Website confirmed by the company’s registered name appearing on it.'}
+              </p>
+            </div>
+          ) : researched ? (
+            <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
+              We couldn&apos;t find a website we could confirm belongs to this organisation.{' '}
+              <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">Search the web ↗</a>
+            </p>
+          ) : (
+            <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
+              We&apos;re looking up this organisation&apos;s website and open roles. Check back soon, or{' '}
+              <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">search the web ↗</a>
+            </p>
+          )}
+        </section>
+
+        <section className="space-y-3">
           <h2 className="text-lg font-semibold">Licence history</h2>
           <ol className="space-y-3 border-l-2 border-slate-200 pl-5">
             {events.map((e) => (
@@ -129,20 +225,22 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
             <p className="text-xs text-slate-500">We check the Home Office register daily and have tracked changes since {formatDate(trackingSince)}.</p>
           )}
         </section>
+        </div>
 
         <aside className="space-y-4">
           <WatchButton sponsorId={sponsor.id} slug={sponsor.slug} />
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <h2 className="mb-3 font-semibold">Find out more</h2>
             <ul className="space-y-2 text-sm">
-              {sponsor.website && (
-                <li><a className="text-indigo-700 hover:underline" href={sponsor.website} rel="noopener nofollow">Company website ↗</a></li>
-              )}
-              {sponsor.careersUrl && (
-                <li><a className="text-indigo-700 hover:underline" href={sponsor.careersUrl} rel="noopener nofollow">Careers page ↗</a></li>
-              )}
-              <li><a className="text-indigo-700 hover:underline" href={companiesHouse} rel="noopener nofollow">Look up on Companies House ↗</a></li>
-              <li><a className="text-indigo-700 hover:underline" href={webSearch} rel="noopener nofollow">Search for their careers page ↗</a></li>
+              <li>
+                <a className="text-indigo-700 hover:underline" href={companiesHouse} rel="noopener nofollow" target="_blank">
+                  {profile?.companyNumber ? `Companies House record (${profile.companyNumber}) ↗` : 'Look up on Companies House ↗'}
+                </a>
+                {profile?.companyStatus && profile.companyStatus !== 'active' && (
+                  <span className="ml-1 font-medium text-red-700">({profile.companyStatus.replace(/-/g, ' ')})</span>
+                )}
+              </li>
+              <li><a className="text-indigo-700 hover:underline" href={webSearch} rel="noopener nofollow" target="_blank">Search the web ↗</a></li>
             </ul>
           </div>
           {sameName.length > 0 && (

@@ -5,7 +5,7 @@ export interface WatchedChange {
   name: string;
   town: string;
   slug: string;
-  type: 'added' | 'removed' | 'readded' | 'rating_changed';
+  type: 'added' | 'removed' | 'readded' | 'rating_changed' | 'location_changed' | 'routes_changed';
   oldValue: string | null;
   newValue: string | null;
 }
@@ -29,6 +29,17 @@ export interface UserAlert {
 
 export const MAX_ITEMS_PER_SEARCH = 15;
 
+/** "Visa routes changed: now also Global Business Mobility; no longer Creative Worker" */
+export function describeRoutes(oldValue: string | null, newValue: string | null): string {
+  const split = (v: string | null) => (v ? v.split(' | ').filter(Boolean) : []);
+  const before = new Set(split(oldValue));
+  const after = new Set(split(newValue));
+  const gained = [...after].filter((r) => !before.has(r));
+  const lost = [...before].filter((r) => !after.has(r));
+  const parts = [gained.length ? `now also ${gained.join(', ')}` : '', lost.length ? `no longer ${lost.join(', ')}` : ''].filter(Boolean);
+  return `Visa routes changed${parts.length ? `: ${parts.join('; ')}` : ''}`;
+}
+
 export function describeChange(c: Pick<WatchedChange, 'type' | 'oldValue' | 'newValue'>): Pick<AlertItem, 'change' | 'tone'> {
   switch (c.type) {
     case 'removed':
@@ -41,6 +52,10 @@ export function describeChange(c: Pick<WatchedChange, 'type' | 'oldValue' | 'new
       return c.newValue?.startsWith('B')
         ? { change: `Downgraded to ${c.newValue} rating (was ${c.oldValue})`, tone: 'warn' }
         : { change: `Rating changed from ${c.oldValue} to ${c.newValue}`, tone: 'neutral' };
+    case 'location_changed':
+      return { change: `Location changed from ${c.oldValue} to ${c.newValue}`, tone: 'neutral' };
+    case 'routes_changed':
+      return { change: describeRoutes(c.oldValue, c.newValue), tone: 'neutral' };
   }
 }
 
