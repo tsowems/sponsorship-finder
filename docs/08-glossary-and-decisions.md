@@ -108,6 +108,10 @@ saw a company; we do the same but say "on the register since at least…" for sp
 Keeping `cacheLife('hours')` keeps pages fast and cheap; the worker revalidates exactly the pages it changed, so
 updates are still instant. The internal token is derived from `BETTER_AUTH_SECRET` to avoid another secret.
 
+### Job listings require a free account
+The number of open roles is public (and in the HTML for Google); the roles and careers link load from `/api/jobs`
+only for signed-in users, so the site builds an email list of job seekers. Job details are never in the cached page HTML.
+
 ### Moves keep the original slug
 A sponsor that changes town keeps its URL, so links, watchers and search rankings survive.
 

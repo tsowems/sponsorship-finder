@@ -2,7 +2,6 @@ import { cacheLife, cacheTag } from 'next/cache';
 import { and, asc, count, desc, eq, gte, ilike, inArray, sql, type SQL } from 'drizzle-orm';
 import {
   getDb,
-  jobs,
   normalizeName,
   normalizeTown,
   registerSnapshots,
@@ -62,17 +61,7 @@ export async function getSponsorBySlug(slug: string) {
 
   const [profile] = await db.select().from(sponsorProfiles).where(eq(sponsorProfiles.sponsorId, sponsor.id));
 
-  // UK roles first, newest first
-  const openJobs = profile?.jobsCount
-    ? await db
-        .select({ id: jobs.id, title: jobs.title, location: jobs.location, department: jobs.department, url: jobs.url, isUk: jobs.isUk, remote: jobs.remote, postedAt: jobs.postedAt })
-        .from(jobs)
-        .where(eq(jobs.sponsorId, sponsor.id))
-        .orderBy(desc(jobs.isUk), sql`${jobs.postedAt} desc nulls last`, asc(jobs.title))
-        .limit(12)
-    : [];
-
-  return { sponsor, events, trackingSince: tracking?.since ?? null, sameName, profile: profile ?? null, jobs: openJobs };
+  return { sponsor, events, trackingSince: tracking?.since ?? null, sameName, profile: profile ?? null };
 }
 
 // ---------------------------------------------------------------- search
@@ -274,4 +263,32 @@ export async function suggestSponsors(q: string): Promise<Suggestion[]> {
       .orderBy(sql`word_similarity(${nq}, ${sponsors.normalizedName}) desc`, sql`length(${sponsors.normalizedName})`)
       .limit(8);
   });
+}
+
+// ---------------------------------------------------------------- town type-ahead
+
+export interface TownSuggestion {
+  town: string;
+  count: number;
+}
+
+/** Towns starting with the typed text, biggest first. Each town once, in its most common spelling. */
+export async function suggestTowns(q: string): Promise<TownSuggestion[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('sponsors');
+
+  const nt = normalizeTown(q);
+  if (nt.length < 2) return [];
+  const rows = await getDb()
+    .select({
+      town: sql<string>`mode() within group (order by ${sponsors.town})`,
+      count: count(),
+    })
+    .from(sponsors)
+    .where(and(eq(sponsors.status, 'active'), sql`${sponsors.normalizedTown} like ${`${escapeLike(nt)}%`}`))
+    .groupBy(sponsors.normalizedTown)
+    .orderBy(desc(count()))
+    .limit(8);
+  return rows.map((r) => ({ town: r.town, count: r.count }));
 }
