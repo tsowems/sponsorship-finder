@@ -10,6 +10,8 @@ import { websiteByCompanyNumber, websitesByName } from './wikidata';
 
 export interface SponsorInput {
   id: number;
+  /** Page to refresh on the website once results are saved. */
+  slug?: string;
   name: string;
   normalizedName: string;
   town: string;

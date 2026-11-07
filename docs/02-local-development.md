@@ -109,5 +109,5 @@ so fake events don't linger.
 | Sign-in link says the token is invalid | Links are single-use and expire after 15 minutes. Request a new one |
 | `Error: You are using the default secret` / `BETTER_AUTH_SECRET is missing` | Set `BETTER_AUTH_SECRET` |
 | Google sign-in: `redirect_uri_mismatch` | Add `{SITE_URL}/api/auth/callback/google` to the OAuth client's redirect URIs |
-| Changes don't show on the site after an import | Pages are cached for up to an hour (`cacheLife('hours')`). Wait, or restart the dev server |
+| Changes don't show on the site after an import/enrichment | The worker refreshes pages via `/api/revalidate` using `SITE_URL` + `BETTER_AUTH_SECRET`. If the log says `[revalidate] skipped` or a non-200 status, check those two match the site. Otherwise pages refresh within the hour |
 | `npm warn install-scripts ...` | npm 11+ asks you to approve packages' install scripts. Safe to ignore here (esbuild works without it) |

@@ -12,6 +12,7 @@ import { closeDb, getDb, sponsors } from '@sponsors/db';
 import { discover } from '../enrich/discover';
 import { refreshJobs, runEnrichment } from '../enrich/run';
 import { saveDiscovery } from '../enrich/store';
+import { revalidateSite } from '../revalidate';
 
 const { values } = parseArgs({
   options: {
@@ -26,14 +27,17 @@ const { values } = parseArgs({
 async function main() {
   if (values.sponsor) {
     const [s] = await getDb()
-      .select({ id: sponsors.id, name: sponsors.name, normalizedName: sponsors.normalizedName, town: sponsors.town, normalizedTown: sponsors.normalizedTown })
+      .select({ id: sponsors.id, slug: sponsors.slug, name: sponsors.name, normalizedName: sponsors.normalizedName, town: sponsors.town, normalizedTown: sponsors.normalizedTown })
       .from(sponsors)
       .where(eq(sponsors.slug, values.sponsor));
     if (!s) throw new Error(`No sponsor with slug ${values.sponsor}`);
     const d = await discover(s);
     console.log(`${s.name} (${s.town})\n  ${d.log.join('\n  ')}`);
     if (d.jobs) for (const j of d.jobs.filter((j) => j.isUk).slice(0, 5)) console.log(`    · ${j.title}, ${j.location}`);
-    if (!values['dry-run']) await saveDiscovery(s.id, d);
+    if (!values['dry-run']) {
+      await saveDiscovery(s.id, d);
+      await revalidateSite({ slugs: [s.slug] });
+    }
     return;
   }
   console.log(JSON.stringify(await runEnrichment({ limit: Number(values.limit), concurrency: Number(values.concurrency) })));

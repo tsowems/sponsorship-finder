@@ -3,9 +3,10 @@ import { getDb, sponsorProfiles, sponsors } from '@sponsors/db';
 import { FETCHABLE_ATS, type AtsProvider } from './careers';
 import { discover, type SponsorInput } from './discover';
 import { fetchJobs } from './jobs';
+import { revalidateSite } from '../revalidate';
 import { replaceJobs, saveDiscovery, saveError } from './store';
 
-const cols = { id: sponsors.id, name: sponsors.name, normalizedName: sponsors.normalizedName, town: sponsors.town, normalizedTown: sponsors.normalizedTown };
+const cols = { id: sponsors.id, slug: sponsors.slug, name: sponsors.name, normalizedName: sponsors.normalizedName, town: sponsors.town, normalizedTown: sponsors.normalizedTown };
 
 /** What to work on next: requested first, then due re-checks, then sponsors never checked (newest first). */
 export async function pickSponsors(limit: number): Promise<SponsorInput[]> {
@@ -57,10 +58,19 @@ export async function runEnrichment(opts: { limit: number; concurrency?: number;
   const batch = await pickSponsors(opts.limit);
   const result: EnrichResult = { checked: 0, websites: 0, careers: 0, withJobs: 0, errors: 0 };
   log(`[enrich] ${batch.length} sponsors to check`);
+  // Refresh company pages on the website as results land (every 25), not only at the end.
+  let pending: string[] = [];
+  const flush = async () => {
+    const slugs = pending;
+    pending = [];
+    if (slugs.length) await revalidateSite({ slugs }, log);
+  };
   await pool(batch, opts.concurrency ?? 6, async (s) => {
     try {
       const d = await discover(s);
       await saveDiscovery(s.id, d);
+      if (s.slug) pending.push(s.slug);
+      if (pending.length >= 25) await flush();
       result.checked++;
       if (d.website) result.websites++;
       if (d.careersUrl) result.careers++;
@@ -72,6 +82,7 @@ export async function runEnrichment(opts: { limit: number; concurrency?: number;
       log(`[enrich] ${s.name}: error ${err instanceof Error ? err.message : err}`);
     }
   });
+  await flush();
   return result;
 }
 
@@ -79,8 +90,9 @@ export async function runEnrichment(opts: { limit: number; concurrency?: number;
 export async function refreshJobs(opts: { limit: number; log?: (m: string) => void }): Promise<{ refreshed: number; jobs: number }> {
   const log = opts.log ?? console.log;
   const due = await getDb()
-    .select({ sponsorId: sponsorProfiles.sponsorId, provider: sponsorProfiles.atsProvider, slug: sponsorProfiles.atsSlug })
+    .select({ sponsorId: sponsorProfiles.sponsorId, provider: sponsorProfiles.atsProvider, slug: sponsorProfiles.atsSlug, pageSlug: sponsors.slug })
     .from(sponsorProfiles)
+    .innerJoin(sponsors, eq(sponsors.id, sponsorProfiles.sponsorId))
     .where(and(
       inArray(sponsorProfiles.atsProvider, [...FETCHABLE_ATS]),
       or(isNull(sponsorProfiles.jobsCheckedAt), lt(sponsorProfiles.jobsCheckedAt, sql`now() - interval '20 hours'`)),
@@ -88,13 +100,16 @@ export async function refreshJobs(opts: { limit: number; log?: (m: string) => vo
     .orderBy(asc(sponsorProfiles.jobsCheckedAt))
     .limit(opts.limit);
   let total = 0;
+  const refreshed: string[] = [];
   await pool(due, 6, async (p) => {
     const fetched = await fetchJobs(p.provider as AtsProvider, p.slug!);
     if (fetched) {
       await replaceJobs(p.sponsorId, p.provider!, fetched);
       total += fetched.length;
+      refreshed.push(p.pageSlug);
     }
   });
+  await revalidateSite({ slugs: refreshed }, log);
   log(`[jobs] refreshed ${due.length} job boards, ${total} openings`);
   return { refreshed: due.length, jobs: total };
 }

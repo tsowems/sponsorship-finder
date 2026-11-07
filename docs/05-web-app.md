@@ -31,7 +31,10 @@ export async function getOverview() {
   separately.
 - **Results must be serialisable** (plain objects, arrays, Dates are fine; class instances aren't).
 - `cacheLife('hours')` = serve cached for a while, revalidate in the background roughly hourly, expire after a day.
-  So **after an import, pages can be up to ~1 hour behind.** That's acceptable for a register that changes daily.
+  Without help, pages could lag new data by up to ~1 hour, so the worker calls **`/api/revalidate`** after saving:
+  researched companies' pages refresh on the very next visit (`revalidateTag('sponsor:<slug>', { expire: 0 })`),
+  and after an import every list/page refreshes in the background (`revalidateTag('sponsors', 'max')`).
+  The request is signed with a token derived from `BETTER_AUTH_SECRET` (`packages/db/src/internal-token.ts`).
 - In dev, the overlay tells you when you forgot a `<Suspense>` or `'use cache'` ("blocking-route" insight).
 
 The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-getting-started/08-caching.md`.
@@ -65,6 +68,8 @@ The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-get
 | `/api/saved-searches` | DELETE | required | Body `{ id }` |
 | `/api/account/alerts` | POST | required | Body `{ enabled: boolean }` |
 | `/api/unsubscribe?u=&t=` | POST | signed token | Unsubscribe page button + email one-click |
+| `/api/profile-request` | POST | — | Queue a company for website/jobs research (sent by company pages without a profile) |
+| `/api/revalidate` | POST | worker token | Refresh cached pages now: `{ slugs: [...] }` (immediately) or `{ all: true }` (in the background) |
 
 Mutation endpoints check the request's `Origin` header matches the site (`isSameOrigin` in `lib/session.ts`).
 
