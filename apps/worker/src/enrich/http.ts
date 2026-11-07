@@ -41,9 +41,9 @@ export function resolvesPublicly(hostname: string): Promise<boolean> {
  */
 export async function safeFetch(
   url: string,
-  opts: { timeoutMs?: number; maxBytes?: number; accept?: string; headers?: Record<string, string> } = {},
+  opts: { timeoutMs?: number; maxBytes?: number; accept?: string; headers?: Record<string, string>; method?: 'GET' | 'POST'; body?: string } = {},
 ): Promise<FetchedPage> {
-  const { timeoutMs = 10_000, maxBytes = 1_500_000, accept = 'text/html,application/xhtml+xml', headers = {} } = opts;
+  const { timeoutMs = 10_000, maxBytes = 1_500_000, accept = 'text/html,application/xhtml+xml', headers = {}, method = 'GET', body } = opts;
   let current = url;
   for (let hop = 0; hop <= 5; hop++) {
     const u = new URL(current);
@@ -51,6 +51,8 @@ export async function safeFetch(
     if (!(await resolvesPublicly(u.hostname))) throw new FetchError(`host does not resolve publicly: ${u.hostname}`);
 
     const res = await fetch(current, {
+      method,
+      body: method === 'POST' ? body : undefined,
       redirect: 'manual',
       signal: AbortSignal.timeout(timeoutMs),
       headers: { 'User-Agent': USER_AGENT, Accept: accept, 'Accept-Language': 'en-GB,en;q=0.8', ...headers },
@@ -80,7 +82,7 @@ export async function safeFetch(
   throw new FetchError('too many redirects');
 }
 
-export async function fetchJson<T>(url: string, opts: { timeoutMs?: number; headers?: Record<string, string> } = {}): Promise<T | null> {
+export async function fetchJson<T>(url: string, opts: { timeoutMs?: number; headers?: Record<string, string>; method?: 'GET' | 'POST'; body?: string } = {}): Promise<T | null> {
   const page = await safeFetch(url, { ...opts, accept: 'application/json', maxBytes: 8_000_000 });
   if (page.status !== 200) return null;
   try {

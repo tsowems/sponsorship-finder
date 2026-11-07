@@ -106,18 +106,18 @@ export function SearchAutocomplete({ defaultValue, className }: { defaultValue?:
       {showList && (
         <div className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-lg">
           {items.length > 0 ? (
-            <ul id={listId} role="listbox">
+            <ul id={listId} role="listbox" className="max-h-[min(55vh,22rem)] overflow-y-auto overscroll-contain">
               {items.map((s, i) => (
                 <li
                   key={s.slug}
                   id={`${listId}-${i}`}
                   role="option"
                   aria-selected={i === active}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    go(s);
-                  }}
-                  onPointerEnter={() => setActive(i)}
+                  // mousedown preventDefault keeps focus in the input on desktop; selecting on click
+                  // (not pointerdown) means a finger dragging to scroll the list doesn't pick a company.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => go(s)}
+                  onPointerEnter={(e) => e.pointerType === 'mouse' && setActive(i)}
                   className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-2 ${i === active ? 'bg-indigo-50' : ''}`}
                 >
                   <span className="min-w-0">

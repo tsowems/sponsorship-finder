@@ -11,9 +11,9 @@ export interface AtsMatch {
 }
 
 /** Providers whose public job-board APIs we read. The rest we only link to. */
-export const FETCHABLE_ATS: ReadonlySet<AtsProvider> = new Set(['greenhouse', 'lever', 'ashby', 'workable', 'recruitee']);
+export const FETCHABLE_ATS: ReadonlySet<AtsProvider> = new Set(['greenhouse', 'lever', 'ashby', 'workable', 'recruitee', 'workday']);
 
-const ATS_PATTERNS: { provider: AtsProvider; re: RegExp; url: (slug: string, m: RegExpMatchArray) => string }[] = [
+const ATS_PATTERNS: { provider: AtsProvider; re: RegExp; url: (slug: string, m: RegExpMatchArray) => string; slug?: (m: RegExpMatchArray) => string }[] = [
   { provider: 'greenhouse', re: /(?:boards|job-boards)(?:\.eu)?\.greenhouse\.io\/(?:embed\/job_board(?:\/js)?\?for=)?([a-z0-9_-]+)/i, url: (s) => `https://job-boards.greenhouse.io/${s}` },
   { provider: 'lever', re: /jobs(?:\.eu)?\.lever\.co\/([a-z0-9_.-]+)/i, url: (s) => `https://jobs.lever.co/${s}` },
   { provider: 'ashby', re: /jobs\.ashbyhq\.com\/([a-z0-9_.%-]+)/i, url: (s) => `https://jobs.ashbyhq.com/${s}` },
@@ -22,7 +22,8 @@ const ATS_PATTERNS: { provider: AtsProvider; re: RegExp; url: (slug: string, m: 
   { provider: 'teamtailor', re: /\/\/([a-z0-9-]+)\.teamtailor\.com/i, url: (s) => `https://${s}.teamtailor.com/jobs` },
   { provider: 'pinpoint', re: /\/\/([a-z0-9-]+)\.pinpointhq\.com/i, url: (s) => `https://${s}.pinpointhq.com/` },
   { provider: 'smartrecruiters', re: /(?:careers|jobs)\.smartrecruiters\.com\/([A-Za-z0-9]+)/, url: (s) => `https://careers.smartrecruiters.com/${s}` },
-  { provider: 'workday', re: /\/\/([a-z0-9-]+)\.wd\d+\.myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?([A-Za-z0-9_-]+)/, url: (_s, m) => m[0].replace(/^\/\//, 'https://') },
+  // Workday: slug = "tenant.wdN/site" (all three are needed to call its job feed)
+  { provider: 'workday', re: /\/\/([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?(?!wday\/|job\/)([A-Za-z0-9_-]+)/, url: (_s, m) => `https://${m[1]}.${m[2]}.myworkdayjobs.com/${m[3]}`, slug: (m) => `${m[1]}.${m[2]}/${m[3]}` },
   { provider: 'bamboohr', re: /\/\/([a-z0-9-]+)\.bamboohr\.com\/(?:careers|jobs)/i, url: (s) => `https://${s}.bamboohr.com/careers` },
   { provider: 'personio', re: /\/\/([a-z0-9-]+)\.jobs\.personio\.(?:de|com)/i, url: (s) => `https://${s}.jobs.personio.com/` },
   { provider: 'jobvite', re: /jobs\.jobvite\.com\/([a-z0-9_-]+)/i, url: (s) => `https://jobs.jobvite.com/${s}` },
@@ -37,7 +38,7 @@ export function detectAts(...sources: string[]): AtsMatch | null {
   for (const src of sources) {
     for (const p of ATS_PATTERNS) {
       const m = src.match(p.re);
-      if (m && !IGNORED_SLUGS.has(m[1].toLowerCase())) matches.push({ provider: p.provider, slug: decodeURIComponent(m[1]), url: p.url(m[1], m) });
+      if (m && !IGNORED_SLUGS.has(m[1].toLowerCase())) matches.push({ provider: p.provider, slug: p.slug ? p.slug(m) : decodeURIComponent(m[1]), url: p.url(m[1], m) });
     }
   }
   return matches.find((m) => FETCHABLE_ATS.has(m.provider)) ?? matches[0] ?? null;

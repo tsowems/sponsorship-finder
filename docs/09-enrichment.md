@@ -45,7 +45,8 @@ Parked/for-sale domains are rejected. Generic names ("Care Services Ltd") and ve
 | Ashby | ✓ | `api.ashbyhq.com/posting-api/job-board/{slug}` |
 | Workable | ✓ | `apply.workable.com/api/v1/widget/accounts/{slug}` |
 | Recruitee | ✓ | `{slug}.recruitee.com/api/offers/` |
-| Teamtailor, Pinpoint, SmartRecruiters, Workday, BambooHR, Personio, Jobvite, iCIMS | link only | detected, careers link shown |
+| Workday | ✓ | `POST {tenant}.wdN.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs` (paged 20 at a time, capped at 200 roles). Slug stored as `tenant.wdN/site` |
+| Teamtailor, Pinpoint, SmartRecruiters, BambooHR, Personio, Jobvite, iCIMS | link only | detected, careers link shown |
 
 Jobs are refreshed daily (`refreshJobs`) and rows that disappear from the board are deleted. `is_uk` is decided from
 country codes when available, otherwise from UK place names (`location.ts`; "New York", "London, Ontario" and US
@@ -94,6 +95,13 @@ From a sample run: well-known companies are found reliably; small businesses muc
 website, or one whose name differs from the registered name). A **Companies House API key** raises coverage and
 confidence: free at <https://developer.company-information.service.gov.uk/>, add as the `COMPANIES_HOUSE_API_KEY`
 repo secret.
+
+## Why some big employers show no jobs
+
+- **Website not matched**: the site doesn't show the exact registered name ("PricewaterhouseCoopers LLP" vs pwc.co.uk).
+  A Companies House key fixes many via the Wikidata company-number lookup.
+- **Careers on an unsupported system** (SuccessFactors, Avature, Oracle, Phenom/Radancy) or a careers page built
+  with JavaScript, where links aren't in the HTML. We show the careers link when we find one.
 
 ## Ideas to improve coverage
 

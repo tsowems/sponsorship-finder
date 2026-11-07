@@ -5,6 +5,7 @@ import { pickCompany } from './companies-house';
 import { candidateDomains, domainLabel } from './domains';
 import { extractLinks, htmlToText } from './html';
 import { isPrivateAddress, parseRobots } from './http';
+import { workdayLocation, workdayPostedOn } from './jobs';
 import { isUkLocation } from './location';
 import { canonicalCompanyNumber, companyNumbersOnPage, isParkedPage, verifyPage } from './verify';
 
@@ -95,4 +96,16 @@ test('robots.txt parsing and private address blocking', () => {
   assert.deepEqual(parseRobots('User-agent: SponsorshipHunterBot\nDisallow: /\nUser-agent: *\nDisallow: /x'), ['/']);
   for (const ip of ['127.0.0.1', '10.1.2.3', '192.168.0.10', '172.20.1.1', '169.254.169.254', '::1', 'fd00::1']) assert.ok(isPrivateAddress(ip), ip);
   assert.ok(!isPrivateAddress('8.8.8.8'));
+});
+
+test('Workday: detection captures tenant, server and site; dates and locations are parsed', () => {
+  assert.deepEqual(detectAts('<a href="https://lbg.wd3.myworkdayjobs.com/en-GB/LBG_Careers/job/x">Jobs</a>'), {
+    provider: 'workday', slug: 'lbg.wd3/LBG_Careers', url: 'https://lbg.wd3.myworkdayjobs.com/LBG_Careers',
+  });
+  const now = new Date('2026-11-07T12:00:00Z');
+  assert.equal(workdayPostedOn('Posted Today', now)?.toISOString().slice(0, 10), '2026-11-07');
+  assert.equal(workdayPostedOn('Posted 3 Days Ago', now)?.toISOString().slice(0, 10), '2026-11-04');
+  assert.equal(workdayPostedOn('Posted 30+ Days Ago', now)?.toISOString().slice(0, 10), '2026-10-08');
+  assert.equal(workdayLocation('2 Locations', '/job/London/Engineer_R1'), 'London');
+  assert.equal(workdayLocation('Leeds', '/job/X/Y'), 'Leeds');
 });
