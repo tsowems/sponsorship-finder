@@ -33,8 +33,9 @@ All variables live in the root `.env` (git-ignored). `.env.example` is the templ
 | `BETTER_AUTH_SECRET` | web, worker | **yes** | 32+ random bytes. Signs sessions *and* unsubscribe links, so it must match between web and worker in each environment |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | web | no | Enables "Continue with Google". Button is hidden when unset |
 | `RESEND_API_KEY` | web, worker | no | Without it, emails (sign-in links, alerts) are **printed to the terminal** instead of sent |
-| `EMAIL_FROM` | web, worker | no | Sender, e.g. `Sponsor Finder <alerts@yourdomain.co.uk>` |
-| `SITE_NAME` | web, worker | no | Brand name on the site and in emails (default "Sponsor Finder") |
+| `EMAIL_FROM` | web, worker | no | Sender, e.g. `Sponsorship Hunter <alerts@sponsorshiphunter.com>` |
+| `SITE_NAME` | web, worker | no | Brand name on the site and in emails (default "Sponsorship Hunter") |
+| `CONTACT_EMAIL` | web | no | Address shown on `/privacy` (default `privacy@sponsorshiphunter.com`) |
 | `SITE_ENV` | web | no | Set to `staging` to force `noindex` (Vercel previews do this automatically via `VERCEL_ENV`) |
 | `DB_POOL_MAX` | web, worker | no | Max Postgres connections per process (default 5) |
 

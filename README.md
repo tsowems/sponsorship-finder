@@ -1,4 +1,4 @@
-# Sponsor Finder
+# Sponsorship Hunter
 
 Find UK employers licensed to sponsor **Skilled Worker** visas, with a daily history of new sponsors, removals and downgrades.
 

@@ -58,10 +58,10 @@ Repo → **Settings → Secrets and variables → Actions**.
 
 | Name | Value |
 |---|---|
-| `PROD_SITE_URL` | `https://yourdomain.co.uk` (or the `*.vercel.app` URL until you have a domain) |
+| `PROD_SITE_URL` | `https://sponsorshiphunter.com` (or the `*.vercel.app` URL until you have a domain) |
 | `STAGING_SITE_URL` | your staging URL (step 4.5) |
-| `EMAIL_FROM` | `Sponsor Finder <alerts@yourdomain.co.uk>` (or `Sponsor Finder <onboarding@resend.dev>` for testing) |
-| `SITE_NAME` | brand name used in alert emails (optional; default "Sponsor Finder") |
+| `EMAIL_FROM` | `Sponsorship Hunter <alerts@sponsorshiphunter.com>` (or `Sponsorship Hunter <onboarding@resend.dev>` for testing) |
+| `SITE_NAME` | brand name used in alert emails (optional; default "Sponsorship Hunter") |
 
 Keep **`main` as the default branch**. Scheduled workflows always run from the default branch, and pull requests default to targeting it.
 
@@ -85,7 +85,7 @@ Without Pro, the flow below still works; it just relies on you not pushing to `m
    | Name | Production | Preview |
    |---|---|---|
    | `DATABASE_URL` | Neon `main` pooled URL | Neon `staging` pooled URL |
-   | `SITE_URL` | `https://yourdomain.co.uk` | staging URL |
+   | `SITE_URL` | `https://sponsorshiphunter.com` | staging URL |
    | `BETTER_AUTH_SECRET` | production secret | staging secret |
    | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ✓ | ✓ (same client is fine) |
    | `RESEND_API_KEY` | ✓ | ✓ |
@@ -93,7 +93,7 @@ Without Pro, the flow below still works; it just relies on you not pushing to `m
    | `SITE_ENV` | (not set) | `staging` |
 
 4. Deploy. **Settings → Git**: Production Branch = `main`.
-5. **Settings → Domains**: add `staging.yourdomain.co.uk` and set its **Git branch** to `staging`.
+5. **Settings → Domains**: add `staging.sponsorshiphunter.com` and set its **Git branch** to `staging`.
    Until you own a domain, staging is `https://<project>-git-staging-<your-vercel-name>.vercel.app`.
 
 Staging and other preview deployments send `noindex` and a blocking `robots.txt` automatically, so Google never indexes them.
@@ -104,8 +104,8 @@ Google Cloud Console → **APIs & Services → Credentials** → your OAuth clie
 
 ```
 http://localhost:3000/api/auth/callback/google
-https://yourdomain.co.uk/api/auth/callback/google
-https://staging.yourdomain.co.uk/api/auth/callback/google
+https://sponsorshiphunter.com/api/auth/callback/google
+https://staging.sponsorshiphunter.com/api/auth/callback/google
 ```
 
 ## 6. Resend: send to anyone

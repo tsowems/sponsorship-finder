@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 const CONTENT_API =
   'https://www.gov.uk/api/content/government/publications/register-of-licensed-sponsors-workers';
-const USER_AGENT = 'SponsorFinder/0.1 (register importer)';
+const USER_AGENT = 'SponsorshipHunter/0.1 (register importer)';
 
 export interface RegisterSource {
   url: string;

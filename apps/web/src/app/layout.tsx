@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { CookieBanner, CookieSettingsButton } from '@/components/CookieBanner';
 import { UserMenu } from '@/components/UserMenu';
 import { IS_INDEXABLE, REGISTER_URL, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 import './globals.css';
@@ -52,8 +53,14 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
               Being on the register means an employer can sponsor Skilled Worker visas. It does not mean any particular job is
               eligible or that the employer will sponsor you.
             </p>
+            <p className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link href="/about" className="underline hover:text-slate-700">About the data</Link>
+              <Link href="/privacy" className="underline hover:text-slate-700">Privacy and cookies</Link>
+              <CookieSettingsButton />
+            </p>
           </div>
         </footer>
+        <CookieBanner />
       </body>
     </html>
   );

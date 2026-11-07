@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { authClient } from '@/lib/auth-client';
@@ -86,7 +87,10 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
         </button>
         {status === 'error' && <p className="text-sm text-red-700">{error}</p>}
       </form>
-      <p className="text-xs text-slate-500">No password needed. We only use your email to sign you in and send the alerts you ask for.</p>
+      <p className="text-xs text-slate-500">
+        No password needed. We only use your email to sign you in and send the alerts you ask for. See our{' '}
+        <Link href="/privacy" className="underline">privacy policy</Link>.
+      </p>
     </div>
   );
 }

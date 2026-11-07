@@ -133,6 +133,9 @@ Changing the secret invalidates old unsubscribe links (and signs everyone out).
 | Secrets in git | `.env` git-ignored; CI uses GitHub secrets; checked before every commit so far |
 | XSS | React escapes output; JSON-LD is serialised with `<` escaped; email templates escape all values |
 
-What's **not** there yet (consider before growing): account deletion / data export (UK GDPR rights; currently
-you'd delete the `user` row by hand, which cascades), a privacy policy page, and a shared rate-limit store if
-you run more than one server instance.
+What's **not** there yet (consider before growing): self-service account deletion / data export (the privacy
+policy tells users to email `CONTACT_EMAIL`; delete the `user` row by hand, which cascades), and a shared
+rate-limit store if you run more than one server instance.
+
+If you change what personal data is stored, who processes it, or add cookies/analytics, **update `/privacy`**
+(`apps/web/src/app/privacy/page.tsx`) and its `LAST_UPDATED` date.

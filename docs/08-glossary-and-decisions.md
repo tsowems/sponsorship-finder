@@ -100,7 +100,7 @@ GitHub Actions *environments* aren't available for private repos on the Free pla
 - No acronyms/aliases in search ("PwC" doesn't find "PricewaterhouseCoopers LLP").
 - Pages can lag an import by up to ~1 hour (cache lifetime).
 - Rate limiting is in-memory per server instance.
-- No account deletion UI, privacy policy page or cookie notice yet.
+- No self-service account deletion or data export (handled by email request, per the privacy policy).
 - Only the Skilled Worker route is shown.
 
 ## Ideas for later (roadmap from planning)
@@ -116,4 +116,4 @@ GitHub Actions *environments* aren't available for private repos on the Free pla
 6. **Trends**: new sponsors per week, sector growth, removals.
 7. **Aliases** for well-known companies (PwC, EY, KPMG, NHS trusts…).
 8. **On-demand cache invalidation** after imports (`revalidateTag('sponsors')` via a secured endpoint the worker calls).
-9. **Account deletion + data export**, privacy policy.
+9. **Self-service account deletion + data export.**

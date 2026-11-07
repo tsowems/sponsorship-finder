@@ -1,4 +1,4 @@
-# Sponsor Finder: developer documentation
+# Sponsorship Hunter: developer documentation
 
 Everything you need to understand, run, change and deploy this codebase.
 

@@ -45,6 +45,7 @@ The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-get
 | `/sponsors/[slug]` | `app/sponsors/[slug]/page.tsx` | **Fully static per company** (`ensureStatic = 'navigation'`) | The SEO page. Built on first visit, then cached |
 | `/changes` | `app/changes/page.tsx` | Static shell + streamed list | Tabs via `?type=added\|removed\|downgraded\|readded` |
 | `/about` | `app/about/page.tsx` | Static | Data explanation + licence |
+| `/privacy` | `app/privacy/page.tsx` | Static | Privacy policy + cookie list (`#cookies`). Contact address from `CONTACT_EMAIL` |
 | `/login` | `app/login/page.tsx` | Static + client form | |
 | `/account` | `app/account/page.tsx` | Per request (reads session) | Redirects to `/login` if signed out |
 | `/unsubscribe` | `app/unsubscribe/page.tsx` | Per request | Confirm button; doesn't unsubscribe on page load |
@@ -127,6 +128,7 @@ licensed sponsors ranked above removed ones.
 | `SaveSearchButton` | **client** | "Email me new sponsors matching…" on search results |
 | `LoginForm` | **client** | Google button + magic-link form |
 | `AccountControls` | **client** | Buttons/forms on `/account`; call the APIs then `router.refresh()` |
+| `CookieBanner`, `CookieSettingsButton` | **client** | Consent banner ("Essential only" / "Accept all") and the footer link that reopens it. State lives in `lib/consent.ts` |
 
 "Client" components have `'use client'` at the top, run in the browser and can use state/effects. Everything
 else renders on the server and ships no JavaScript.
@@ -141,7 +143,7 @@ else renders on the server and ships no JavaScript.
 - `noindex` + `Disallow: /` on staging/preview (`IS_INDEXABLE` in `lib/site.ts`)
 - `lang="en-GB"`, Open Graph site name and locale
 
-After launch: add the domain to **Google Search Console** and submit `https://yourdomain/robots.txt`'s sitemaps.
+After launch: add the domain to **Google Search Console** and submit the sitemaps listed in `https://www.sponsorshiphunter.com/robots.txt`.
 
 ## Styling
 
@@ -149,6 +151,22 @@ Tailwind CSS 4: utility classes directly in JSX; global styles in `app/globals.c
 `slate` (text/borders), `indigo` (actions), `emerald` / `red` / `amber` (licensed / removed / B-rated).
 Fonts: Geist via `next/font/google`. They're downloaded at build time and self-hosted, with no runtime calls to Google.
 
+## Cookie consent
+
+The site only sets essential cookies (Better Auth's session cookies, after sign-in), which UK law (PECR) doesn't
+require consent for. The banner still asks, so the choice is recorded before any optional tool is added.
+
+- Choice is stored in `localStorage` (`cookie-consent-v1`) by `lib/consent.ts`.
+- **Adding analytics later:** load it only when `useConsent() === 'all'`, and add it to the cookie table on `/privacy`.
+
+```tsx
+'use client';
+import { useConsent } from '@/lib/consent';
+export function Analytics() {
+  return useConsent() === 'all' ? <script defer src="…" /> : null;
+}
+```
+
 ## Site-wide settings
 
-`src/lib/site.ts`: `SITE_NAME` (env-overridable), `SITE_TAGLINE`, `SITE_URL`, `REGISTER_URL`, `IS_INDEXABLE`.
+`src/lib/site.ts`: `SITE_NAME` (env-overridable), `SITE_TAGLINE`, `SITE_URL`, `REGISTER_URL`, `IS_INDEXABLE`, `CONTACT_EMAIL` (env-overridable).
