@@ -1,0 +1,57 @@
+# Runs on every push to staging and on every pull request into main.
+# A PR from staging -> main should only be merged when this is green.
+name: CI
+
+on:
+  push:
+    branches: [staging]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # The build prerenders pages from the database, so CI builds against the *staging* database.
+      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      SITE_URL: https://staging.example.invalid
+      SITE_ENV: staging
+      BETTER_AUTH_SECRET: ci-build-only-secret-not-used-at-runtime-0000
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint -w web
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Migrate staging database
+        if: env.DATABASE_URL != ''
+        run: npm run db:migrate
+
+      - name: Build website
+        if: env.DATABASE_URL != ''
+        run: npm run build
+
+      - name: Build skipped
+        if: env.DATABASE_URL == ''
+        run: echo "::warning::STAGING_DATABASE_URL secret is not set, so the Next.js build was skipped."

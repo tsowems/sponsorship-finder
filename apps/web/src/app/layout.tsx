@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { UserMenu } from '@/components/UserMenu';
-import { REGISTER_URL, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
+import { IS_INDEXABLE, REGISTER_URL, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 import './globals.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   description:
     'Search every UK employer licensed to sponsor Skilled Worker visas. Updated daily from the Home Office register, with new sponsors, removals and downgrades tracked.',
   openGraph: { siteName: SITE_NAME, type: 'website', locale: 'en_GB' },
+  ...(IS_INDEXABLE ? {} : { robots: { index: false, follow: false } }),
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

@@ -1,8 +1,9 @@
 import type { MetadataRoute } from 'next';
 import { getSponsorSitemapCount } from '@/lib/data';
-import { SITE_URL } from '@/lib/site';
+import { IS_INDEXABLE, SITE_URL } from '@/lib/site';
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
+  if (!IS_INDEXABLE) return { rules: { userAgent: '*', disallow: '/' } };
   const chunks = await getSponsorSitemapCount();
   return {
     rules: { userAgent: '*', allow: '/' },

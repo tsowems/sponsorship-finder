@@ -1,0 +1,74 @@
+# Checks gov.uk for a new sponsor register, imports it if anything changed, then emails alerts.
+# Scheduled runs always use the `main` branch and the production database.
+name: Register import
+
+on:
+  schedule:
+    # GitHub cron is in UTC. Weekdays every 2 hours, 06:15–18:15 UTC (07:15–19:15 in BST).
+    - cron: '15 6-18/2 * * 1-5'
+    # Weekends: once a day, in case of a late Friday publication.
+    - cron: '15 12 * * 0,6'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which database to import into
+        type: choice
+        options: [production, staging]
+        default: production
+      alerts:
+        description: Send alert emails
+        type: boolean
+        default: true
+
+concurrency:
+  group: register-import-${{ inputs.target || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Production always runs released code (main); staging runs the staging branch.
+          ref: ${{ (inputs.target || 'production') == 'production' && 'main' || 'staging' }}
+
+      - name: Select production or staging settings
+        env:
+          TARGET: ${{ inputs.target || 'production' }}
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          PROD_BETTER_AUTH_SECRET: ${{ secrets.PROD_BETTER_AUTH_SECRET }}
+          PROD_SITE_URL: ${{ vars.PROD_SITE_URL }}
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          STAGING_BETTER_AUTH_SECRET: ${{ secrets.STAGING_BETTER_AUTH_SECRET }}
+          STAGING_SITE_URL: ${{ vars.STAGING_SITE_URL }}
+        run: |
+          if [ "$TARGET" = production ]; then P=PROD; else P=STAGING; fi
+          db_var="${P}_DATABASE_URL"; secret_var="${P}_BETTER_AUTH_SECRET"; url_var="${P}_SITE_URL"
+          for v in "$db_var" "$secret_var" "$url_var"; do
+            if [ -z "${!v}" ]; then echo "::error::$v is not set (repo Settings → Secrets and variables → Actions)"; exit 1; fi
+          done
+          {
+            echo "DATABASE_URL=${!db_var}"
+            # Must match the website's BETTER_AUTH_SECRET: it signs unsubscribe links in alert emails.
+            echo "BETTER_AUTH_SECRET=${!secret_var}"
+            echo "SITE_URL=${!url_var}"
+          } >> "$GITHUB_ENV"
+          echo "Target: $TARGET"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Apply database migrations
+        run: npm run db:migrate
+
+      - name: Import register and send alerts
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+        run: npm run import -- ${{ inputs.alerts == false && '--no-alerts' || '' }}
