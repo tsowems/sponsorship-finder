@@ -35,8 +35,11 @@ export type SponsorListItem = Awaited<ReturnType<typeof searchSponsors>>['result
 
 export async function getSponsorBySlug(slug: string) {
   'use cache';
-  cacheLife('hours');
-  cacheTag('sponsors', `sponsor:${slug}`);
+  // Long-lived on purpose: every cached copy counts against Vercel's ISR write allowance, and the
+  // worker revalidates `sponsor:<slug>` as soon as a sponsor's data changes (see /api/revalidate).
+  // Deliberately NOT tagged 'sponsors', so an import doesn't re-render all ~122k company pages.
+  cacheLife('max');
+  cacheTag(`sponsor:${slug}`);
 
   const db = getDb();
   const [sponsor] = await db.select().from(sponsors).where(eq(sponsors.slug, slug)).limit(1);
@@ -74,11 +77,8 @@ export interface SearchInput {
   page: number;
 }
 
+/** Not cached on the server: every query/page combination would be a separate cache write. */
 export async function searchSponsors(input: SearchInput) {
-  'use cache';
-  cacheLife('hours');
-  cacheTag('sponsors');
-
   const db = getDb();
   const nq = input.q ? normalizeName(input.q) : '';
   const nt = input.town ? normalizeTown(input.town) : '';
@@ -125,7 +125,7 @@ export type ChangeFilter = 'all' | 'added' | 'removed' | 'downgraded' | 'readded
 
 export async function getChanges(filter: ChangeFilter, page: number, pageSize = 50) {
   'use cache';
-  cacheLife('hours');
+  cacheLife('days');
   cacheTag('sponsors');
 
   const db = getDb();
@@ -169,7 +169,7 @@ export type ChangeRow = Awaited<ReturnType<typeof getChanges>>['rows'][number];
 
 export async function getOverview() {
   'use cache';
-  cacheLife('hours');
+  cacheLife('days');
   cacheTag('sponsors');
 
   const db = getDb();
@@ -209,7 +209,7 @@ export async function getSponsorSitemapCount() {
 
 export async function getSponsorSitemapChunk(chunk: number) {
   'use cache';
-  cacheLife('hours');
+  cacheLife('days');
   return getDb()
     .select({ slug: sponsors.slug, updatedAt: sponsors.updatedAt })
     .from(sponsors)
@@ -229,11 +229,8 @@ export interface Suggestion {
 }
 
 /** Fast, small result set for the search box. Licensed sponsors rank above removed ones. */
+/** Not cached on the server (one entry per keystroke); /api/suggest sets CDN cache headers instead. */
 export async function suggestSponsors(q: string): Promise<Suggestion[]> {
-  'use cache';
-  cacheLife('hours');
-  cacheTag('sponsors');
-
   const nq = normalizeName(q);
   if (nq.length < 2) return [];
   const db = getDb();
@@ -273,11 +270,8 @@ export interface TownSuggestion {
 }
 
 /** Towns starting with the typed text, biggest first. Each town once, in its most common spelling. */
+/** Not cached on the server; /api/towns sets CDN cache headers instead. */
 export async function suggestTowns(q: string): Promise<TownSuggestion[]> {
-  'use cache';
-  cacheLife('hours');
-  cacheTag('sponsors');
-
   const nt = normalizeTown(q);
   if (nt.length < 2) return [];
   const rows = await getDb()

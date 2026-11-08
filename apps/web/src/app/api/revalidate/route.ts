@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   // companies appear immediately.
   for (const slug of slugs) revalidateTag(`sponsor:${slug}`, { expire: 0 });
   // Everything (lists, home page, all company pages): serve the old copy while refreshing in the
-  // background, so 122k pages don't all go cold at once after an import.
+  // background. (Company pages aren't tagged 'sponsors'; changed ones are refreshed by slug.)
   if (body.all === true) revalidateTag('sponsors', 'max');
 
   return json({ revalidated: slugs.length, all: body.all === true });

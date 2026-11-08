@@ -98,12 +98,14 @@ The same trick is used for the header's "Sign in / My alerts" (`UserMenu`).
 
 ## Data layer (`src/lib/data.ts`)
 
-All database reads for pages go through this file. Every function is `'use cache'`.
+All database reads for pages go through this file. Functions with a small, fixed set of inputs are `'use cache'`
+(company page: `max`; lists and stats: `days`). Free-form inputs (search, suggestions, towns) are not, because each
+distinct input would be stored as a separate Vercel ISR write. See [decisions](08-glossary-and-decisions.md).
 
 | Function | Used by |
 |---|---|
 | `getSponsorBySlug(slug)` | company page + its metadata. Also loads events and same-name sponsors |
-| `searchSponsors({ q, town, rating, status, page })` | `/sponsors`. Falls back to fuzzy suggestions when nothing matches |
+| `searchSponsors({ q, town, rating, status, page })` | `/sponsors`. Falls back to fuzzy suggestions when nothing matches. **Not** server-cached |
 | `suggestSponsors(q)` | `/api/suggest` |
 | `getChanges(filter, page, pageSize)` | `/changes`, home page |
 | `getOverview()` | home page stats |
