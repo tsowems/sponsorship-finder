@@ -107,7 +107,8 @@ saw a company; we do the same but say "on the register since at least…" for sp
 ### Cache lifetimes are set by Vercel's ISR write allowance
 Every cached page or `'use cache'` result Vercel stores is an "ISR write" (Hobby plan: 200,000 a month). With
 122k company pages and crawlers, hourly expiry used the whole allowance in about a day. So:
-company pages use `cacheLife('max')` (refreshed by slug when data changes); lists/stats use `'days'`
+company pages are rendered per request and not stored at all (each stored page cost ~5 writes; 122k pages × 5 ≫ 200k),
+with their data cached in memory (`cacheLife('max')`, refreshed by slug when it changes); lists/stats use `'days'`
 (refreshed by the import); search, suggestions and towns aren't server-cached at all (CDN headers on the APIs
 instead); robots.txt keeps crawlers off query-string URLs and blocks SEO/AI-training bots.
 **Check Vercel → Usage → ISR Writes after changing any `cacheLife` or adding `'use cache'` with free-form arguments.**
