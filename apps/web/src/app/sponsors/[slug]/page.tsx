@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import { RatingBadge, StatusBadge } from '@/components/Badges';
 import { EventPill } from '@/components/ChangeList';
 import { JobsPanel } from '@/components/JobsPanel';
@@ -11,17 +12,15 @@ import { formatDate } from '@/lib/format';
 import { SITE_URL } from '@/lib/site';
 
 /**
- * Company pages must reach Google as complete HTML (no loading placeholders), so the whole
- * route is required to be static. Unknown slugs render on first request and are then cached.
+ * Company pages are rendered per request and NOT stored as ISR pages. With ~122k companies,
+ * storing each page cost ~5 Vercel "ISR writes" (HTML, RSC data and prefetch segments), so a
+ * single crawl of the site would use ~600k writes (Hobby allows 200k/month).
+ * The page still arrives as complete HTML (we await everything before responding, no
+ * placeholders), so search engines see the full content. The sponsor data itself is cached
+ * in memory via getSponsorBySlug('use cache'), which is not an ISR write.
  */
-export const ensureStatic = 'navigation';
 /** Deliberately blocking: we want the full page (for SEO), not an instant placeholder shell. */
 export const instant = false;
-
-export async function generateStaticParams() {
-  // Pages are generated on demand; one placeholder satisfies the build requirement.
-  return [{ slug: '__placeholder__' }];
-}
 
 export async function generateMetadata({ params }: PageProps<'/sponsors/[slug]'>): Promise<Metadata> {
   const { slug } = await params;
@@ -39,6 +38,7 @@ export async function generateMetadata({ params }: PageProps<'/sponsors/[slug]'>
 }
 
 export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug]'>) {
+  await connection(); // render at request time; never stored as an ISR page
   const { slug } = await params;
   const data = await getSponsorBySlug(slug);
   if (!data) notFound();

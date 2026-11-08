@@ -45,7 +45,7 @@ The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-get
 |---|---|---|---|
 | `/` | `app/page.tsx` | Static + cached data | Hero search, stats, latest new/removed |
 | `/sponsors` | `app/sponsors/page.tsx` | Static shell + streamed results | Reads `searchParams` → results in `<Suspense>`. Filtered views are `noindex` |
-| `/sponsors/[slug]` | `app/sponsors/[slug]/page.tsx` | **Fully static per company** (`ensureStatic = 'navigation'`) | The SEO page. Built on first visit, then cached |
+| `/sponsors/[slug]` | `app/sponsors/[slug]/page.tsx` | **Rendered per request** (`await connection()`), complete HTML | The SEO page. Not stored as ISR pages (Vercel write limits); sponsor data cached in memory |
 | `/changes` | `app/changes/page.tsx` | Static shell + streamed list | Tabs via `?type=added\|removed\|downgraded\|readded` |
 | `/about` | `app/about/page.tsx` | Static | Data explanation + licence |
 | `/privacy` | `app/privacy/page.tsx` | Static | Privacy policy + cookie list (`#cookies`). Contact address from `CONTACT_EMAIL` |
@@ -77,33 +77,40 @@ Mutation endpoints check the request's `Origin` header matches the site (`isSame
 
 ## The company page in detail
 
-This page is what Google indexes, so it's built to be **complete HTML on the first request**:
+This page is what Google indexes, so it always arrives as **complete HTML** (nothing important behind a loading
+placeholder). It is rendered **per request** rather than stored as an ISR page:
 
 ```ts
-export const ensureStatic = 'navigation';       // whole route must be static: no Suspense placeholders
-export async function generateStaticParams() {   // required by ensureStatic; we build pages on demand,
-  return [{ slug: '__placeholder__' }];          // so one placeholder (it 404s) satisfies the build
+export const instant = false;            // allowed to wait for data before responding
+export default async function SponsorPage({ params }) {
+  await connection();                    // request-time; never stored as an ISR page
+  ...
 }
 ```
 
-- First visit to `/sponsors/acme-ltd-london`: Next renders it fully (~0.4s), stores it, serves it.
-- Later visits: served from cache (~2–5 ms) until the `cacheLife('hours')` lifetime passes.
-- Unknown slug → `notFound()` before any streaming → real **404** status.
+Why: on Vercel each stored page costs ~5 "ISR writes" (HTML, RSC data, three prefetch segments). With ~122k companies,
+one crawl of the site would need ~600k writes; the Hobby plan allows 200k a month. Rendering per request costs a
+function run and a cached-in-memory data read instead (~0.5 s).
+
+- Unknown slug → `notFound()` → the not-found page with `noindex` (status 200, because the shared shell has already
+  started streaming). Search engines don't index it.
 - `generateMetadata` gives each page its own `<title>`, description and canonical URL; the page also emits
   **JSON-LD** (`schema.org/Organization`).
+- Personal bits (Watch button, jobs list, header sign-in state) are client components that call the APIs.
 
-Anything user-specific on this page (the **Watch** button) is a **client component** that fetches its state
-from `/api/watch` after load. That's how the page stays static for everyone.
-The same trick is used for the header's "Sign in / My alerts" (`UserMenu`).
+If you move to a host without write limits (or Vercel Pro), you could go back to static per-company pages
+(`ensureStatic = 'navigation'` + `generateStaticParams`), which are faster for visitors.
 
 ## Data layer (`src/lib/data.ts`)
 
-All database reads for pages go through this file. Every function is `'use cache'`.
+All database reads for pages go through this file. Functions with a small, fixed set of inputs are `'use cache'`
+(company page: `max`; lists and stats: `days`). Free-form inputs (search, suggestions, towns) are not, because each
+distinct input would be stored as a separate Vercel ISR write. See [decisions](08-glossary-and-decisions.md).
 
 | Function | Used by |
 |---|---|
 | `getSponsorBySlug(slug)` | company page + its metadata. Also loads events and same-name sponsors |
-| `searchSponsors({ q, town, rating, status, page })` | `/sponsors`. Falls back to fuzzy suggestions when nothing matches |
+| `searchSponsors({ q, town, rating, status, page })` | `/sponsors`. Falls back to fuzzy suggestions when nothing matches. **Not** server-cached |
 | `suggestSponsors(q)` | `/api/suggest` |
 | `getChanges(filter, page, pageSize)` | `/changes`, home page |
 | `getOverview()` | home page stats |
