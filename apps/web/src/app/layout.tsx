@@ -43,6 +43,8 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             </p>
             <p className="flex flex-wrap gap-x-4 gap-y-1">
               <Link href="/about" className="underline hover:text-slate-700">About the data</Link>
+              <Link href="/faq" className="underline hover:text-slate-700">FAQ</Link>
+              <Link href="/industries" className="underline hover:text-slate-700">Sponsors by industry</Link>
               <Link href="/privacy" className="underline hover:text-slate-700">Privacy and cookies</Link>
               <CookieSettingsButton />
             </p>
