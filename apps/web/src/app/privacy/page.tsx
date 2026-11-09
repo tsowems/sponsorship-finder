@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/privacy' },
 };
 
-const LAST_UPDATED = '7 November 2026';
+const LAST_UPDATED = '9 November 2026';
 
 export default function PrivacyPage() {
   const host = new URL(SITE_URL).host;
@@ -55,6 +55,15 @@ export default function PrivacyPage() {
               <td>Sign-in sessions, including IP address and browser type</td>
               <td>To keep you signed in and protect accounts from misuse</td>
               <td>Legitimate interests: security</td>
+            </tr>
+            <tr>
+              <td>
+                Page visits: the page address (without search terms), the website that sent you, country, device type, whether you were
+                signed in, and a visitor code that changes every day
+              </td>
+              <td>To count visitors and see which pages are useful. The daily code is a one-way scramble of your IP address and browser, so we
+                can count you once per day but can&apos;t identify you or follow you across days. No cookies are used. Kept for about 13 months.</td>
+              <td>Legitimate interests: understanding and improving the site</td>
             </tr>
             <tr>
               <td>Record of alert emails sent to you</td>
@@ -131,8 +140,9 @@ export default function PrivacyPage() {
         </table>
       </div>
       <p>
-        These are strictly necessary, so they don&apos;t need consent. We don&apos;t use advertising or tracking cookies. If we add analytics
-        in future, it will only run if you choose &ldquo;Accept all&rdquo;, and we&apos;ll list it here. You can change your choice at any time
+        These are strictly necessary, so they don&apos;t need consent. We don&apos;t use advertising or tracking cookies. Our visitor counting
+        (see above) uses no cookies or browser storage, and is switched off if your browser sends &ldquo;Do Not Track&rdquo; or Global
+        Privacy Control. If we add cookie-based analytics in future, it will only run if you choose &ldquo;Accept all&rdquo;, and we&apos;ll list it here. You can change your choice at any time
         with &ldquo;Cookie settings&rdquo; at the bottom of every page.
       </p>
 
