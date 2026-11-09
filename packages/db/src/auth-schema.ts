@@ -14,6 +14,8 @@ export const user = pgTable('user', {
   updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
   /** Our field: master switch for alert emails (unsubscribe sets this to false). */
   alertsEnabled: boolean('alerts_enabled').default(true).notNull(),
+  /** Our field: set every time the user signs in (Google or email link). Shown in /admin. */
+  lastSignInAt: timestamp('last_sign_in_at'),
 });
 
 export const session = pgTable(
