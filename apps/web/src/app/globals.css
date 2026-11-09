@@ -1,11 +1,40 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-brand-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/*
+ * Brand palette, shared with the applywell family: a soft violet in place of Tailwind's indigo, and
+ * lavender-tinted greys. Every `indigo-*` / `slate-*` class in the app picks these up.
+ */
+@theme {
+  --color-indigo-50: #f4f2fe;
+  --color-indigo-100: #ebe7fd;
+  --color-indigo-200: #d8d1fb;
+  --color-indigo-300: #bcaff6;
+  --color-indigo-400: #9d8bef;
+  --color-indigo-500: #7f6be6;
+  --color-indigo-600: #6c58db;
+  --color-indigo-700: #5a47c2;
+  --color-indigo-800: #4a3b9c;
+  --color-indigo-900: #3d337c;
+  --color-indigo-950: #251e4d;
+
+  --color-slate-50: #f8f7fc;
+  --color-slate-100: #f1f0f7;
+  --color-slate-200: #e6e4f0;
+  --color-slate-300: #d3d0e0;
+  --color-slate-400: #9e9ab3;
+  --color-slate-500: #6f6b85;
+  --color-slate-600: #55516b;
+  --color-slate-700: #403c55;
+  --color-slate-800: #2a2740;
+  --color-slate-900: #1b1830;
+}
+
 body {
-  background: #f8fafc;
-  color: #0f172a;
+  background: #f6f5fb;
+  color: var(--color-slate-900);
 }
