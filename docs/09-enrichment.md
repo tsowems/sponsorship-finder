@@ -52,6 +52,7 @@ Parked/for-sale domains are rejected. Generic names ("Care Services Ltd") and ve
 | Recruitee | ✓ | `{slug}.recruitee.com/api/offers/` |
 | Workday | ✓ | `POST {tenant}.wdN.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs` (paged 20 at a time, capped at 200 roles). Slug stored as `tenant.wdN/site` |
 | Teamtailor, Pinpoint, SmartRecruiters, BambooHR, Personio, Jobvite, iCIMS, custom sites | ✓ when the adverts carry `JobPosting` data | read off the careers page (below), else careers link only |
+| iTrent, Oracle Recruiting, Oleeo (tal.net), NHS Jobs, Trac, SuccessFactors, Jobtrain (councils, NHS, universities) | link only | their vacancy-list link is stored as `vacancies_url` ("Current vacancies" button, session ids removed) |
 
 ### Jobs from the careers page itself
 
@@ -102,7 +103,9 @@ Councils, NHS bodies, universities, colleges, schools and police forces have no 
 their own steps (`public-bodies.ts`), tried before Wikidata and ordinary guesses: GOV.UK for councils, NHS ODS for NHS
 bodies, then guesses on protected domains (`leeds.gov.uk`, `brighton.ac.uk`). No brand-only guesses for them
 ("leeds.com" is never the council). Their job systems (iTrent, NHS Jobs/Trac, Oleeo…) usually can't be read, so they
-get the careers link.
+get the careers link, plus a "Current vacancies" link to the hiring system when it's separate. When an official
+site blocks our bot (fife.gov.uk), a `jobs.`/`careers.`/`recruitment.` subdomain of the same protected domain is used as
+the careers link after a DNS check only; the site itself isn't fetched.
 
 ## robots.txt
 

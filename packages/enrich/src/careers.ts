@@ -2,7 +2,9 @@ import type { Link } from './html';
 
 export type AtsProvider =
   | 'greenhouse' | 'lever' | 'ashby' | 'workable' | 'recruitee' // job lists fetched
-  | 'teamtailor' | 'pinpoint' | 'smartrecruiters' | 'workday' | 'bamboohr' | 'personio' | 'jobvite' | 'icims'; // link only
+  | 'teamtailor' | 'pinpoint' | 'smartrecruiters' | 'workday' | 'bamboohr' | 'personio' | 'jobvite' | 'icims' // link only
+  // Common in councils, NHS and universities (link only: session-based or no public feed)
+  | 'itrent' | 'oracle' | 'oleeo' | 'trac' | 'nhsjobs' | 'successfactors' | 'jobtrain';
 
 export interface AtsMatch {
   provider: AtsProvider;
@@ -28,9 +30,30 @@ const ATS_PATTERNS: { provider: AtsProvider; re: RegExp; url: (slug: string, m: 
   { provider: 'personio', re: /\/\/([a-z0-9-]+)\.jobs\.personio\.(?:de|com)/i, url: (s) => `https://${s}.jobs.personio.com/` },
   { provider: 'jobvite', re: /jobs\.jobvite\.com\/([a-z0-9_-]+)/i, url: (s) => `https://jobs.jobvite.com/${s}` },
   { provider: 'icims', re: /\/\/(careers-[a-z0-9-]+)\.icims\.com/i, url: (s) => `https://${s}.icims.com/jobs` },
+  // For these the link itself is the vacancy list (often with a session-free id such as iTrent's WVID), so keep it whole.
+  { provider: 'itrent', re: /https?:\/\/([a-z0-9]+)\.webitrent\.com\/[^\s"'<>]+/i, url: (_s, m) => cleanUrl(m[0]) },
+  { provider: 'oracle', re: /https?:\/\/([a-z0-9.-]+)\/hcmUI\/CandidateExperience\/[a-z-]+\/sites\/CX_\d+[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
+  { provider: 'oleeo', re: /https?:\/\/([a-z0-9-]+)\.tal\.net\/[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
+  { provider: 'trac', re: /https?:\/\/(?:www\.|apps\.)?(trac)\.jobs\/[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
+  { provider: 'nhsjobs', re: /https?:\/\/(?:www\.)?(jobs)\.nhs\.uk\/[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
+  { provider: 'successfactors', re: /https?:\/\/(career\d*)\.successfactors\.(?:com|eu)\/[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
+  { provider: 'jobtrain', re: /https?:\/\/(?:www\.)?jobtrain\.co\.uk\/([a-z0-9-]+)[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
 ];
 
+/** Undo HTML escaping and drop session ids, which expire ("USESSION=…"). */
+function cleanUrl(raw: string): string {
+  const url = raw.replace(/&amp;/g, '&').replace(/[.,;)]+$/, '');
+  try {
+    const u = new URL(url);
+    for (const k of [...u.searchParams.keys()]) if (/^(usession|sessionid|jsessionid|sid)$/i.test(k)) u.searchParams.delete(k);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 const IGNORED_SLUGS = new Set(['embed', 'v1', 'api', 'jobs', 'www', 'app', 'careers', 'static', 'assets']);
+const IGNORED_FOR: Partial<Record<AtsProvider, true>> = { nhsjobs: true };
 
 /** Find a hiring platform referenced anywhere in some HTML or URLs. Fetchable providers win. */
 export function detectAts(...sources: string[]): AtsMatch | null {
@@ -38,7 +61,7 @@ export function detectAts(...sources: string[]): AtsMatch | null {
   for (const src of sources) {
     for (const p of ATS_PATTERNS) {
       const m = src.match(p.re);
-      if (m && !IGNORED_SLUGS.has(m[1].toLowerCase())) matches.push({ provider: p.provider, slug: p.slug ? p.slug(m) : decodeURIComponent(m[1]), url: p.url(m[1], m) });
+      if (m && (IGNORED_FOR[p.provider] || !IGNORED_SLUGS.has(m[1].toLowerCase()))) matches.push({ provider: p.provider, slug: p.slug ? p.slug(m) : decodeURIComponent(m[1]), url: p.url(m[1], m) });
     }
   }
   return matches.find((m) => FETCHABLE_ATS.has(m.provider)) ?? matches[0] ?? null;

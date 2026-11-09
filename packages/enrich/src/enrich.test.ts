@@ -181,3 +181,15 @@ test('robots.txt wildcards and Allow lines (Drupal-style file must not block the
   assert.ok(robotsAllows(rules, '/files/report.pdf?download=1'), '$ anchors the end');
   assert.ok(!robotsAllows(parseRobotsRules('User-agent: *\nDisallow: /\n'), '/'));
 });
+
+test('public-sector hiring systems are recognised and their vacancy-list links kept (minus session ids)', () => {
+  const it = detectAts('<a href="https://ce0992li.webitrent.com/ce0992li_webrecruitment/wrd/run/ETREC179GF.open?USESSION=ABC123&amp;WVID=04238200UO">Search jobs</a>');
+  assert.equal(it?.provider, 'itrent');
+  assert.equal(it?.url, 'https://ce0992li.webitrent.com/ce0992li_webrecruitment/wrd/run/ETREC179GF.open?WVID=04238200UO');
+  assert.equal(detectAts('<a href="https://fa-abcd-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_6009/jobs">Jobs</a>')?.provider, 'oracle');
+  assert.equal(detectAts('https://leeds.tal.net/vx/candidate/jobboard/vacancy/1/adv/')?.provider, 'oleeo');
+  assert.equal(detectAts('https://www.jobs.nhs.uk/candidate/search/results?employerId=123')?.provider, 'nhsjobs');
+  assert.equal(detectAts('https://apps.trac.jobs/job-search?employer=1')?.provider, 'trac');
+  // A fetchable provider still wins over a link-only one.
+  assert.equal(detectAts('https://x.webitrent.com/x/wrd/run/A.open https://jobs.lever.co/acme')?.provider, 'lever');
+});

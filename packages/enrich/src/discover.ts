@@ -7,7 +7,7 @@ import { extractLinks, htmlToText } from './html';
 import { fetchPage, resolvesPublicly, type FetchedPage } from './http';
 import { fetchJobs, type FetchedJob } from './jobs';
 import { legalPageCandidates, verifyPage, type VerifiedBy } from './verify';
-import { govukCouncilWebsite, nhsOdsWebsite, publicBodyKind, publicDomainGuesses } from './public-bodies';
+import { govukCouncilWebsite, isProtectedHost, nhsOdsWebsite, publicBodyKind, publicDomainGuesses } from './public-bodies';
 import { websiteByCompanyNumber, websitesByName } from './wikidata';
 
 export interface SponsorInput {
@@ -26,6 +26,8 @@ export interface Discovery {
   websiteSource: 'wikidata' | 'govuk' | 'nhs_ods' | 'wikidata_search' | 'domain_guess' | null;
   websiteVerifiedBy: VerifiedBy | 'wikidata' | 'govuk' | 'nhs_ods' | null;
   careersUrl: string | null;
+  /** The hiring system's vacancy list, when we can only link to it and it differs from the careers page. */
+  vacanciesUrl: string | null;
   ats: AtsMatch | null;
   jobs: FetchedJob[] | null;
   /** Where `jobs` came from: the hiring platform's API, or adverts read off the careers page. */
@@ -41,7 +43,7 @@ const originOf = (url: string) => `${new URL(url).origin}/`;
 /** Find everything we can about one sponsor. Makes network requests; never writes to the database. */
 export async function discover(s: SponsorInput): Promise<Discovery> {
   const log: string[] = [];
-  const out: Discovery = { company: null, website: null, websiteSource: null, websiteVerifiedBy: null, careersUrl: null, ats: null, jobs: null, jobsSource: null, log };
+  const out: Discovery = { company: null, website: null, websiteSource: null, websiteVerifiedBy: null, careersUrl: null, vacanciesUrl: null, ats: null, jobs: null, jobsSource: null, log };
 
   // 1. Companies House: the registered name and number make website verification much stronger.
   if (companiesHouseEnabled()) {
@@ -161,7 +163,22 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
     }
   }
   if (!out.careersUrl && out.ats) out.careersUrl = out.ats.url;
+  // Official public-sector sites (often blocking bots, like fife.gov.uk): a jobs./careers. subdomain of the same
+  // protected domain belongs to the same body. Checked by DNS only; the site itself isn't fetched.
+  if (!out.careersUrl && out.website) {
+    const base = new URL(out.website).hostname.replace(/^www\./, '');
+    if (isProtectedHost(base)) {
+      for (const sub of ['jobs', 'careers', 'recruitment', 'vacancies']) {
+        if (await resolvesPublicly(`${sub}.${base}`)) {
+          out.careersUrl = `https://${sub}.${base}/`; // a subdomain of the official site, not fetched
+          break;
+        }
+      }
+    }
+  }
+  if (out.ats && !FETCHABLE_ATS.has(out.ats.provider) && out.ats.url !== out.careersUrl) out.vacanciesUrl = out.ats.url;
   log.push(`careers: ${out.careersUrl ?? 'not found'}${out.ats ? ` (${out.ats.provider}: ${out.ats.slug})` : ''}`);
+  if (out.vacanciesUrl) log.push(`vacancies: ${out.vacanciesUrl}`);
 
   // 4. Live openings: from the hiring platform's API, else from adverts on the careers page itself
   if (out.ats && FETCHABLE_ATS.has(out.ats.provider)) {
