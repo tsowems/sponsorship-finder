@@ -37,7 +37,7 @@ All variables live in the root `.env` (git-ignored). `.env.example` is the templ
 | `SITE_NAME` | web, worker | no | Brand name on the site and in emails (default "Sponsorship Hunter") |
 | `CONTACT_EMAIL` | web | no | Address shown on `/privacy` (default `privacy@sponsorshiphunter.com`) |
 | `SITE_ENV` | web | no | Set to `staging` to force `noindex` (Vercel previews do this automatically via `VERCEL_ENV`) |
-| `COMPANIES_HOUSE_API_KEY` | worker | no | Better website matching (company numbers). Free key |
+| `COMPANIES_HOUSE_API_KEY` | web, worker | no | Better website matching (company numbers). Free key |
 | `DB_POOL_MAX` | web, worker | no | Max Postgres connections per process (default 5) |
 
 Generate a secret:

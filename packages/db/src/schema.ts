@@ -203,6 +203,8 @@ export const sponsorProfiles = pgTable(
     jobsCheckedAt: timestamp('jobs_checked_at', { withTimezone: true }),
 
     checkedAt: timestamp('checked_at', { withTimezone: true }),
+    /** When the website last started an immediate lookup for a visitor (stops duplicate lookups). */
+    lookupStartedAt: timestamp('lookup_started_at', { withTimezone: true }),
     nextCheckAt: timestamp('next_check_at', { withTimezone: true }),
     attempts: integer('attempts').notNull().default(0),
     error: text('error'),

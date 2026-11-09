@@ -1,12 +1,9 @@
-import { and, asc, desc, eq, inArray, isNull, lt, notExists, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, notExists, notInArray, or, sql } from 'drizzle-orm';
 import { getDb, sponsorProfiles, sponsors } from '@sponsors/db';
-import { FETCHABLE_ATS, type AtsProvider } from './careers';
-import { discover, type SponsorInput } from './discover';
-import { fetchJobs } from './jobs';
-import { revalidateSite } from '../revalidate';
-import { replaceJobs, saveDiscovery, saveError } from './store';
+import { discover, FETCHABLE_ATS, refreshSponsorJobs, saveDiscovery, saveError, sponsorInputColumns, type SponsorInput } from '@sponsors/enrich';
+import { revalidateSite } from './revalidate';
 
-const cols = { id: sponsors.id, slug: sponsors.slug, name: sponsors.name, normalizedName: sponsors.normalizedName, town: sponsors.town, normalizedTown: sponsors.normalizedTown };
+const cols = sponsorInputColumns;
 
 /** What to work on next: requested first, then due re-checks, then sponsors never checked (newest first). */
 export async function pickSponsors(limit: number): Promise<SponsorInput[]> {
@@ -86,30 +83,41 @@ export async function runEnrichment(opts: { limit: number; concurrency?: number;
   return result;
 }
 
-/** Refresh job lists for sponsors on a hiring platform we can read (daily is plenty). */
+/**
+ * Refresh open roles: hiring-platform APIs daily, careers pages every 3 days (one page per company,
+ * plus only adverts we haven't read before).
+ */
 export async function refreshJobs(opts: { limit: number; log?: (m: string) => void }): Promise<{ refreshed: number; jobs: number }> {
   const log = opts.log ?? console.log;
+  const fetchable = [...FETCHABLE_ATS];
   const due = await getDb()
-    .select({ sponsorId: sponsorProfiles.sponsorId, provider: sponsorProfiles.atsProvider, slug: sponsorProfiles.atsSlug, pageSlug: sponsors.slug })
+    .select({ sponsorId: sponsorProfiles.sponsorId, provider: sponsorProfiles.atsProvider, slug: sponsorProfiles.atsSlug, careersUrl: sponsorProfiles.careersUrl, pageSlug: sponsors.slug })
     .from(sponsorProfiles)
     .innerJoin(sponsors, eq(sponsors.id, sponsorProfiles.sponsorId))
-    .where(and(
-      inArray(sponsorProfiles.atsProvider, [...FETCHABLE_ATS]),
-      or(isNull(sponsorProfiles.jobsCheckedAt), lt(sponsorProfiles.jobsCheckedAt, sql`now() - interval '20 hours'`)),
+    .where(or(
+      and(
+        inArray(sponsorProfiles.atsProvider, fetchable),
+        or(isNull(sponsorProfiles.jobsCheckedAt), lt(sponsorProfiles.jobsCheckedAt, sql`now() - interval '20 hours'`)),
+      ),
+      and(
+        isNotNull(sponsorProfiles.careersUrl),
+        or(isNull(sponsorProfiles.atsProvider), notInArray(sponsorProfiles.atsProvider, fetchable)),
+        eq(sponsors.status, 'active'),
+        or(isNull(sponsorProfiles.jobsCheckedAt), lt(sponsorProfiles.jobsCheckedAt, sql`now() - interval '3 days'`)),
+      ),
     ))
-    .orderBy(asc(sponsorProfiles.jobsCheckedAt))
+    .orderBy(sql`${sponsorProfiles.jobsCheckedAt} asc nulls first`)
     .limit(opts.limit);
   let total = 0;
   const refreshed: string[] = [];
   await pool(due, 6, async (p) => {
-    const fetched = await fetchJobs(p.provider as AtsProvider, p.slug!);
-    if (fetched) {
-      await replaceJobs(p.sponsorId, p.provider!, fetched);
-      total += fetched.length;
+    const n = await refreshSponsorJobs(p).catch(() => null);
+    if (n !== null) {
+      total += n;
       refreshed.push(p.pageSlug);
     }
   });
   await revalidateSite({ slugs: refreshed }, log);
-  log(`[jobs] refreshed ${due.length} job boards, ${total} openings`);
+  log(`[jobs] refreshed ${due.length} job lists, ${total} openings`);
   return { refreshed: due.length, jobs: total };
 }

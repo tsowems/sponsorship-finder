@@ -2,7 +2,8 @@
 
 The register only gives a name, town, county, rating and routes. Everything else on a company page
 (website, careers page, open roles, Companies House details) comes from the **enrichment** job.
-Code: `apps/worker/src/enrich/`. Stored in `sponsor_profiles` and `jobs`.
+Code: `packages/enrich/` (shared by the worker and the website; the batch runner is `apps/worker/src/enrich-run.ts`).
+Stored in `sponsor_profiles` and `jobs`.
 
 ```mermaid
 flowchart TD
@@ -20,7 +21,8 @@ flowchart TD
   W -- yes --> C
   C --> ATS{Hiring platform?}
   ATS -- Greenhouse, Lever, Ashby,<br/>Workable, Recruitee --> J[Fetch open roles via<br/>their public API]
-  ATS -- other / none --> L[Link to careers page]
+  ATS -- other / none --> CP[Read job adverts linked from<br/>the careers page: JobPosting data]
+  CP -- none --> L[Link to careers page]
 ```
 
 ## How a website is accepted
@@ -46,9 +48,18 @@ Parked/for-sale domains are rejected. Generic names ("Care Services Ltd") and ve
 | Workable | ✓ | `apply.workable.com/api/v1/widget/accounts/{slug}` |
 | Recruitee | ✓ | `{slug}.recruitee.com/api/offers/` |
 | Workday | ✓ | `POST {tenant}.wdN.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs` (paged 20 at a time, capped at 200 roles). Slug stored as `tenant.wdN/site` |
-| Teamtailor, Pinpoint, SmartRecruiters, BambooHR, Personio, Jobvite, iCIMS | link only | detected, careers link shown |
+| Teamtailor, Pinpoint, SmartRecruiters, BambooHR, Personio, Jobvite, iCIMS, custom sites | ✓ when the adverts carry `JobPosting` data | read off the careers page (below), else careers link only |
 
-Jobs are refreshed daily (`refreshJobs`) and rows that disappear from the board are deleted. `is_uk` is decided from
+### Jobs from the careers page itself
+
+When there's no API we can read, `careers-page.ts` looks for links on the careers page that point at individual adverts
+(`/careers/jobs/123-compliance-analyst`, `/vacancies/senior-engineer`…) and opens up to 25 of them. A role is only
+listed when its page carries schema.org `JobPosting` structured data (which Google for Jobs requires, so most hiring
+systems include it); that gives the employer's own title, location and posting date, and stops links like
+"/careers/life-at-acme" being shown as jobs. Stored with `source = 'careers_page'`. Refreshes reuse roles already read,
+so only new adverts are fetched.
+
+Jobs are refreshed daily for hiring-platform APIs and every 3 days for careers pages (`refreshJobs`) and rows that disappear from the board are deleted. `is_uk` is decided from
 country codes when available, otherwise from UK place names (`location.ts`; "New York", "London, Ontario" and US
 state codes are excluded).
 
@@ -60,6 +71,24 @@ state codes are excluded).
 - Refuses private/internal network addresses (protects the runner).
 - Companies House: throttled to ~1.6 requests/second (their limit is 600 per 5 minutes).
 
+## Looking a company up when someone opens its page
+
+A company page that hasn't been researched (or whose last search found nothing more than a day ago) shows
+"Checking their website and open roles now…" and calls `POST /api/profile-request`. The website runs the same lookup
+there and then (usually 2–5 seconds, `maxDuration` 60 s) and the page refreshes itself with the result. Guards:
+
+- one lookup per company per 15 minutes (`sponsor_profiles.lookup_started_at`), at most 40 across the site per 10 minutes;
+- bots and crawlers (by user agent) and removed sponsors are only queued for the worker;
+- anything not done immediately stays queued (priority 5) for the next worker run.
+
+Needs `COMPANIES_HOUSE_API_KEY` in Vercel as well as GitHub for the best matches.
+
+## Domain guesses
+
+From the registered name minus company-type words: `acmerobotics.co.uk`, `acme-robotics.com`, … then the brand on its
+own for distinctive first words (`RHAELM Operations Limited` → `rhaelm.com`). A brand-only domain can never pass the
+weak "domain is the name" check, so it's only accepted when the site shows the company number or full registered name.
+
 ## Queue and priorities
 
 `sponsor_profiles.status` = `queued` → `done` / `not_found` / `error`.
@@ -67,7 +96,7 @@ state codes are excluded).
 | Trigger | Priority |
 |---|---|
 | Someone watches the company (`POST /api/watch`) | 10 |
-| Someone opens a company page with no profile yet (`ProfileRequest` → `POST /api/profile-request`) | 5 |
+| Someone opens a company page with no profile yet (`ProfileRequest` → `POST /api/profile-request`; usually looked up immediately) | 5 |
 | Background sweep (newest sponsors first) | — (no profile row yet) |
 
 Re-checks: websites found → 60 days; not found → 30 days; errors → 1–7 days (backing off).

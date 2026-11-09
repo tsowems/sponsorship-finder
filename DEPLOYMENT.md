@@ -93,6 +93,7 @@ Without Pro, the flow below still works; it just relies on you not pushing to `m
    | `EMAIL_FROM` | ✓ | ✓ |
    | `SITE_ENV` | (not set) | `staging` |
    | `API_KEYS` | optional: keys for the data API (`docs/10-data-api.md`) | optional |
+   | `COMPANIES_HOUSE_API_KEY` | same key as the GitHub secret: company pages look companies up the moment someone opens them | ✓ |
 
 4. Deploy. **Settings → Git**: Production Branch = `main`.
 5. **Settings → Domains**: add `staging.sponsorshiphunter.com` and set its **Git branch** to `staging`.

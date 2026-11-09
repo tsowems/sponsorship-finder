@@ -6,7 +6,7 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  transpilePackages: ['@sponsors/db', '@sponsors/email'],
+  transpilePackages: ['@sponsors/db', '@sponsors/email', '@sponsors/enrich'],
   serverExternalPackages: ['postgres'],
   turbopack: {
     root: path.resolve(__dirname, '../..'),

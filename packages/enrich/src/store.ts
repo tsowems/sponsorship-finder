@@ -30,7 +30,7 @@ export async function saveDiscovery(sponsorId: number, d: Discovery): Promise<vo
     error: null,
   };
   await getDb().insert(sponsorProfiles).values(values).onConflictDoUpdate({ target: sponsorProfiles.sponsorId, set: values });
-  if (d.jobs) await replaceJobs(sponsorId, d.ats!.provider, d.jobs);
+  if (d.jobs && d.jobsSource) await replaceJobs(sponsorId, d.jobsSource, d.jobs);
 }
 
 export async function saveError(sponsorId: number, err: unknown): Promise<void> {
@@ -48,6 +48,11 @@ export async function saveError(sponsorId: number, err: unknown): Promise<void> 
         nextCheckAt: sql`now() + least(${sponsorProfiles.attempts} + 1, 7) * interval '1 day'`,
       },
     });
+}
+
+/** A job list couldn't be read this time: note it so we don't retry on every run. */
+export async function markJobsChecked(sponsorId: number): Promise<void> {
+  await getDb().update(sponsorProfiles).set({ jobsCheckedAt: new Date() }).where(eq(sponsorProfiles.sponsorId, sponsorId));
 }
 
 /** Make the stored jobs for this sponsor exactly match the latest fetch. */

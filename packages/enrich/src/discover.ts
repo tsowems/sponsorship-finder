@@ -1,4 +1,5 @@
 import { normalizeName } from '@sponsors/db/normalize';
+import { jobsFromCareersPage } from './careers-page';
 import { COMMON_CAREERS_PATHS, detectAts, FETCHABLE_ATS, findCareersLinks, looksLikeCareersPage, type AtsMatch } from './careers';
 import { companiesHouseEnabled, findCompany, type CompanyRecord } from './companies-house';
 import { candidateDomains } from './domains';
@@ -26,15 +27,20 @@ export interface Discovery {
   careersUrl: string | null;
   ats: AtsMatch | null;
   jobs: FetchedJob[] | null;
+  /** Where `jobs` came from: the hiring platform's API, or adverts read off the careers page. */
+  jobsSource: string | null;
   log: string[];
 }
+
+/** `jobs.source` for adverts read off a company's own careers page. */
+export const CAREERS_PAGE_SOURCE = 'careers_page';
 
 const originOf = (url: string) => `${new URL(url).origin}/`;
 
 /** Find everything we can about one sponsor. Makes network requests; never writes to the database. */
 export async function discover(s: SponsorInput): Promise<Discovery> {
   const log: string[] = [];
-  const out: Discovery = { company: null, website: null, websiteSource: null, websiteVerifiedBy: null, careersUrl: null, ats: null, jobs: null, log };
+  const out: Discovery = { company: null, website: null, websiteSource: null, websiteVerifiedBy: null, careersUrl: null, ats: null, jobs: null, jobsSource: null, log };
 
   // 1. Companies House: the registered name and number make website verification much stronger.
   if (companiesHouseEnabled()) {
@@ -139,10 +145,19 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
   if (!out.careersUrl && out.ats) out.careersUrl = out.ats.url;
   log.push(`careers: ${out.careersUrl ?? 'not found'}${out.ats ? ` (${out.ats.provider}: ${out.ats.slug})` : ''}`);
 
-  // 4. Live openings from the hiring platform
+  // 4. Live openings: from the hiring platform's API, else from adverts on the careers page itself
   if (out.ats && FETCHABLE_ATS.has(out.ats.provider)) {
     out.jobs = await fetchJobs(out.ats.provider, out.ats.slug);
-    log.push(`jobs: ${out.jobs?.length ?? 'unavailable'} (${out.jobs?.filter((j) => j.isUk).length ?? 0} in the UK)`);
+    out.jobsSource = out.jobs ? out.ats.provider : null;
   }
+  if (!out.jobs?.length && out.careersUrl) {
+    const fromPage = await jobsFromCareersPage(out.careersUrl);
+    if (fromPage?.length) {
+      out.jobs = fromPage;
+      out.jobsSource = CAREERS_PAGE_SOURCE;
+    }
+  }
+  if (out.jobs) log.push(`jobs: ${out.jobs.length} from ${out.jobsSource} (${out.jobs.filter((j) => j.isUk).length} in the UK)`);
+  else if (out.careersUrl) log.push('jobs: none readable (careers link only)');
   return out;
 }
