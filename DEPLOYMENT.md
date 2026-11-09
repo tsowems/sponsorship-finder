@@ -92,6 +92,7 @@ Without Pro, the flow below still works; it just relies on you not pushing to `m
    | `RESEND_API_KEY` | ✓ | ✓ |
    | `EMAIL_FROM` | ✓ | ✓ |
    | `SITE_ENV` | (not set) | `staging` |
+   | `API_KEYS` | optional: keys for the data API (`docs/10-data-api.md`) | optional |
 
 4. Deploy. **Settings → Git**: Production Branch = `main`.
 5. **Settings → Domains**: add `staging.sponsorshiphunter.com` and set its **Git branch** to `staging`.
