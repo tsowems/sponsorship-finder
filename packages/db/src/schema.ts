@@ -197,6 +197,8 @@ export const sponsorProfiles = pgTable(
     /** Why we trust it: 'wikidata' | 'govuk' | 'nhs_ods' | 'company_number' | 'company_name' | 'public_domain' | 'domain_and_title' */
     websiteVerifiedBy: text('website_verified_by'),
     careersUrl: text('careers_url'),
+    /** The hiring system's vacancy list when it's separate from the careers page (iTrent, Oracle, Teamtailor…). */
+    vacanciesUrl: text('vacancies_url'),
     /** 'greenhouse' | 'lever' | 'ashby' | 'workable' | 'recruitee' | 'teamtailor' | 'workday' | ... */
     atsProvider: text('ats_provider'),
     atsSlug: text('ats_slug'),

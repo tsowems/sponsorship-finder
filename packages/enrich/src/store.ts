@@ -22,6 +22,7 @@ export async function saveDiscovery(sponsorId: number, d: Discovery): Promise<vo
     websiteSource: d.websiteSource,
     websiteVerifiedBy: d.websiteVerifiedBy,
     careersUrl: d.careersUrl,
+    vacanciesUrl: d.vacanciesUrl,
     atsProvider: d.ats?.provider ?? null,
     atsSlug: d.ats?.slug ?? null,
     checkedAt: now,

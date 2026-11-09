@@ -24,7 +24,7 @@ export function JobsPanel(props: { sponsorId: number; slug: string; jobsCount: n
   const { sponsorId, slug, jobsCount, ukJobsCount, hasCareersPage } = props;
   const { data: session, isPending } = authClient.useSession();
   const signedIn = Boolean(session?.user);
-  const [data, setData] = useState<{ careersUrl: string | null; checkedAt: string | null; jobs: Job[] } | null>(null);
+  const [data, setData] = useState<{ careersUrl: string | null; vacanciesUrl?: string | null; checkedAt: string | null; jobs: Job[] } | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -87,10 +87,31 @@ export function JobsPanel(props: { sponsorId: number; slug: string; jobsCount: n
 
   return (
     <div className="space-y-2">
-      {data.careersUrl && (
-        <a href={data.careersUrl} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-          Careers page ↗
-        </a>
+      <div className="flex flex-wrap gap-2">
+        {data.vacanciesUrl && (
+          <a href={data.vacanciesUrl} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+            Current vacancies ↗
+          </a>
+        )}
+        {data.careersUrl && (
+          <a
+            href={data.careersUrl}
+            rel="noopener nofollow"
+            target="_blank"
+            className={
+              data.vacanciesUrl
+                ? 'inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50'
+                : 'inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700'
+            }
+          >
+            Careers page ↗
+          </a>
+        )}
+      </div>
+      {data.vacanciesUrl && !data.jobs.length && (
+        <p className="text-xs text-slate-500">
+          Their vacancies are on a separate hiring system ({new URL(data.vacanciesUrl).hostname}), linked from their careers page.
+        </p>
       )}
       {data.jobs.length > 0 && (
         <>
