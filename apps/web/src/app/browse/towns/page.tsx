@@ -4,7 +4,7 @@ import { getTowns, MIN_INDEXED_TOWN } from '@/lib/browse';
 import { formatNumber } from '@/lib/format';
 
 export const metadata: Metadata = {
-  title: 'Skilled Worker visa sponsors by town',
+  title: 'Skilled Worker visa sponsors by city and town',
   description: 'Towns and cities with employers licensed to sponsor Skilled Worker visas, A–Z, with the number of sponsors in each.',
   alternates: { canonical: '/browse/towns' },
 };
@@ -22,12 +22,12 @@ export default async function TownsPage() {
   return (
     <div className="space-y-8">
       <nav className="text-sm text-slate-500">
-        <Link href="/browse" className="hover:underline">Browse</Link> / Towns
+        <Link href="/browse" className="hover:underline">Sponsors by city</Link> / All cities and towns
       </nav>
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sponsors by town</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sponsors by city and town</h1>
         <p className="max-w-2xl text-slate-600">
-          {formatNumber(towns.length)} towns and cities with {MIN_INDEXED_TOWN} or more licensed sponsors. The register lists the town of each
+          {formatNumber(towns.length)} cities and towns with {MIN_INDEXED_TOWN} or more licensed sponsors. The register lists the town of each
           sponsor&apos;s registered address, which isn&apos;t always where the jobs are. Smaller places can be found with the{' '}
           <Link href="/sponsors" className="text-indigo-700 hover:underline">search</Link>.
         </p>

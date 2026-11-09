@@ -6,7 +6,7 @@ import { UserMenu } from './UserMenu';
 
 const NAV: { href: string; label: string; short?: string }[] = [
   { href: '/sponsors', label: 'Search' },
-  { href: '/browse', label: 'Browse' },
+  { href: '/browse', label: 'Sponsors by city', short: 'By city' },
   { href: '/changes', label: 'Latest changes', short: 'Changes' },
   { href: '/about', label: 'About the data', short: 'About' },
 ];

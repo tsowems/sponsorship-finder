@@ -10,6 +10,7 @@ import { ProfileRequest } from '@/components/ProfileRequest';
 import { WatchButton } from '@/components/WatchButton';
 import { profileNeedsLookup } from '@sponsors/db';
 import { getSponsorBySlug } from '@/lib/data';
+import { getCurrentUser } from '@/lib/session';
 import { formatDate } from '@/lib/format';
 import { SITE_URL } from '@/lib/site';
 
@@ -45,6 +46,8 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const data = await getSponsorBySlug(slug);
   if (!data) notFound();
   const { sponsor, events, trackingSince, sameName, profile } = data;
+  // Website, careers, jobs and job-board links are for signed-in users only, and aren't sent to anyone else.
+  const signedIn = Boolean(await getCurrentUser());
   const active = sponsor.status === 'active';
   const downgraded = sponsor.rating.startsWith('B');
 
@@ -67,7 +70,6 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
     name: sponsor.name,
     url: `${SITE_URL}/sponsors/${sponsor.slug}`,
     address: { '@type': 'PostalAddress', addressLocality: sponsor.town, addressRegion: sponsor.county ?? undefined, addressCountry: 'GB' },
-    ...(profile?.website ? { sameAs: [profile.website] } : {}),
   };
 
   return (
@@ -140,46 +142,59 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Website and jobs</h2>
           {lookUp && <ProfileRequest sponsorId={sponsor.id} />}
-          {profile?.website ? (
-            <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
-              <div className="flex flex-wrap gap-3">
-                <a href={profile.website} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
-                  Visit {new URL(profile.website).hostname.replace(/^www\./, '')} ↗
-                </a>
+          {signedIn ? (
+            <>
+            {profile?.website ? (
+              <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
+                <div className="flex flex-wrap gap-3">
+                  <a href={profile.website} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+                    Visit {new URL(profile.website).hostname.replace(/^www\./, '')} ↗
+                  </a>
+                </div>
+                <JobsPanel
+                  sponsorId={sponsor.id}
+                  slug={sponsor.slug}
+                  jobsCount={profile.jobsCount}
+                  ukJobsCount={profile.ukJobsCount}
+                  hasCareersPage={Boolean(profile.careersUrl)}
+                />
+                {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} compact={foundJobsOrCareers} />}
+                <p className="text-xs text-slate-500">
+                  {profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
+                    ? 'Website confirmed using the company’s registration number.'
+                    : profile.websiteVerifiedBy === 'govuk'
+                      ? 'Official council website, from GOV.UK’s list of local councils.'
+                      : profile.websiteVerifiedBy === 'nhs_ods'
+                        ? 'Official website, from the NHS organisation directory.'
+                        : profile.websiteVerifiedBy === 'public_domain'
+                          ? 'Official public-sector website (a protected address such as .gov.uk, .nhs.uk or .ac.uk) naming this organisation.'
+                          : 'Website confirmed by the company’s registered name appearing on it.'}
+                </p>
               </div>
-              <JobsPanel
-                sponsorId={sponsor.id}
-                slug={sponsor.slug}
-                jobsCount={profile.jobsCount}
-                ukJobsCount={profile.ukJobsCount}
-                hasCareersPage={Boolean(profile.careersUrl)}
-              />
-              {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} compact={foundJobsOrCareers} />}
-              <p className="text-xs text-slate-500">
-                {profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
-                  ? 'Website confirmed using the company’s registration number.'
-                  : profile.websiteVerifiedBy === 'govuk'
-                    ? 'Official council website, from GOV.UK’s list of local councils.'
-                    : profile.websiteVerifiedBy === 'nhs_ods'
-                      ? 'Official website, from the NHS organisation directory.'
-                      : profile.websiteVerifiedBy === 'public_domain'
-                        ? 'Official public-sector website (a protected address such as .gov.uk, .nhs.uk or .ac.uk) naming this organisation.'
-                        : 'Website confirmed by the company’s registered name appearing on it.'}
+            ) : researched ? (
+              <div className="space-y-4 rounded-lg border border-dashed border-slate-300 bg-white p-4">
+                <p className="text-sm text-slate-600">
+                  We couldn&apos;t find a website we could confirm belongs to this organisation.{' '}
+                  <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">Search the web ↗</a>
+                </p>
+                {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} />}
+              </div>
+            ) : (
+              <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
+                We&apos;re looking up this organisation&apos;s website and open roles. If nothing appears, check back later, or{' '}
+                <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">search the web ↗</a>
               </p>
-            </div>
-          ) : researched ? (
-            <div className="space-y-4 rounded-lg border border-dashed border-slate-300 bg-white p-4">
-              <p className="text-sm text-slate-600">
-                We couldn&apos;t find a website we could confirm belongs to this organisation.{' '}
-                <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">Search the web ↗</a>
-              </p>
-              {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} />}
-            </div>
+            )}
+            </>
           ) : (
-            <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
-              We&apos;re looking up this organisation&apos;s website and open roles. If nothing appears, check back later, or{' '}
-              <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">search the web ↗</a>
-            </p>
+            <SignInForCompanyLinks
+              slug={sponsor.slug}
+              researched={Boolean(researched)}
+              website={Boolean(profile?.website)}
+              careers={Boolean(profile?.careersUrl || profile?.vacanciesUrl)}
+              jobsCount={profile?.jobsCount ?? 0}
+              ukJobsCount={profile?.ukJobsCount ?? 0}
+            />
           )}
         </section>
 
@@ -244,5 +259,31 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
         </aside>
       </div>
     </article>
+  );
+}
+
+/** What signed-out visitors see instead of the website / careers / jobs / job-board links: what we found, and a sign-in button. */
+function SignInForCompanyLinks(props: { slug: string; researched: boolean; website: boolean; careers: boolean; jobsCount: number; ukJobsCount: number }) {
+  const { slug, researched, website, careers, jobsCount, ukJobsCount } = props;
+  const found: string[] = [];
+  if (website) found.push('their website');
+  if (careers) found.push('their careers page');
+  if (ukJobsCount) found.push(`${ukJobsCount} open role${ukJobsCount === 1 ? '' : 's'} in the UK`);
+  else if (jobsCount) found.push(`${jobsCount} open role${jobsCount === 1 ? '' : 's'}`);
+  found.push('links to search for their jobs on LinkedIn, Indeed and other job boards');
+  const list = found.length > 1 ? `${found.slice(0, -1).join(', ')} and ${found.at(-1)}` : found[0];
+  return (
+    <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-5">
+      <p className="font-medium text-slate-900">
+        {researched ? `We found ${list}.` : 'We’re looking up this organisation’s website and open roles.'}
+      </p>
+      <p className="mt-1 text-sm text-slate-600">Sign in free to see them, and get alerts if this company&apos;s licence changes.</p>
+      <Link
+        href={`/login?next=${encodeURIComponent(`/sponsors/${slug}`)}`}
+        className="mt-3 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+      >
+        Sign in to see website and jobs
+      </Link>
+    </div>
   );
 }

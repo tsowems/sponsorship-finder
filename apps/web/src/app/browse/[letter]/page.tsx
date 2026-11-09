@@ -33,7 +33,7 @@ export default async function LetterPage({ params, searchParams }: PageProps<'/b
   return (
     <div className="space-y-6">
       <nav className="text-sm text-slate-500">
-        <Link href="/browse" className="hover:underline">Browse</Link> / A–Z
+        <Link href="/browse" className="hover:underline">Sponsors by city</Link> / A–Z
       </nav>
       <header className="space-y-3">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sponsors starting with {letterLabel(letter)}</h1>
