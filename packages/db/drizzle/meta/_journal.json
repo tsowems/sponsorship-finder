@@ -64,6 +64,13 @@
       "when": 1794251546909,
       "tag": "0008_vacancies_url",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794253215144,
+      "tag": "0009_user_last_sign_in",
+      "breakpoints": true
     }
   ]
 }
