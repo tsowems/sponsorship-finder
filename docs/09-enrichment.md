@@ -34,6 +34,9 @@ We never show a website we can't tie to the organisation. In order of strength (
 | Wikidata lists the site against the Companies House number | `wikidata` | Needs a Companies House key to know the number |
 | The Companies House number appears on the site | `company_number` | UK companies must display it; usually in the footer or privacy policy |
 | The full registered name ("Acme Robotics Ltd") appears on the site | `company_name` | Only for names with a legal suffix (Ltd, PLC, LLP, CIC) |
+| GOV.UK's local-council list gives the council's homepage | `govuk` | Councils (`gov.uk/api/local-authority/<slug>`, name must match) |
+| The NHS Organisation Data Service lists the website | `nhs_ods` | NHS trusts and boards, matched on exact name |
+| A protected public-sector domain (.gov.uk, .nhs.uk, .ac.uk, .sch.uk, .police.uk…) whose title names the organisation, or whose address matches the name and page names it | `public_domain` | Only real public bodies can register these. Covers universities (`leeds.ac.uk`), colleges and others found via guesses or Wikidata |
 | The domain *is* the name, the title names it, and the page mentions its town | `domain_and_title` | Weakest; only for distinctive names of 6+ letters |
 
 Parked/for-sale domains are rejected. Generic names ("Care Services Ltd") and very short names are never guessed.
@@ -91,6 +94,20 @@ page shows links that open Indeed, LinkedIn, Glassdoor, Reed and Totaljobs' own 
 nothing is stored, so the company still counts as having no careers page and is re-checked on the normal schedule
 (30 days for "not found", 60 days for a website without careers page, or an hour after a "not found" when someone
 opens the page). We don't scrape those sites: they have no public API for this and their terms forbid it.
+
+## Public bodies
+
+Councils, NHS bodies, universities, colleges, schools and police forces have no Companies House number, so they get
+their own steps (`public-bodies.ts`), tried before Wikidata and ordinary guesses: GOV.UK for councils, NHS ODS for NHS
+bodies, then guesses on protected domains (`leeds.gov.uk`, `brighton.ac.uk`). No brand-only guesses for them
+("leeds.com" is never the council). Their job systems (iTrent, NHS Jobs/Trac, Oleeo…) usually can't be read, so they
+get the careers link.
+
+## robots.txt
+
+We honour `Allow`/`Disallow` with `*` wildcards and `$` anchors, most specific rule winning (Google's rules). Before
+this, a rule like `Disallow: /*/media/oembed` (standard in Drupal, common on council sites) was read as "block
+everything", so those sites were never fetched.
 
 ## Domain guesses
 

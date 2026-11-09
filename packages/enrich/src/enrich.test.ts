@@ -5,7 +5,7 @@ import { jobFromPosting, jobLinkCandidates, jobPostingsInHtml } from './careers-
 import { pickCompany } from './companies-house';
 import { candidateDomains, domainLabel } from './domains';
 import { extractLinks, htmlToText } from './html';
-import { isPrivateAddress, parseRobots } from './http';
+import { isPrivateAddress, parseRobots, parseRobotsRules, robotsAllows } from './http';
 import { workdayLocation, workdayPostedOn } from './jobs';
 import { isUkLocation } from './location';
 import { canonicalCompanyNumber, companyNumbersOnPage, isParkedPage, verifyPage } from './verify';
@@ -145,4 +145,39 @@ test('JobPosting JSON-LD (inside @graph) becomes a job with UK location', () => 
   assert.equal(j?.postedAt?.toISOString().slice(0, 10), '2026-11-01');
   const tokyo = jobFromPosting({ '@type': 'JobPosting', title: 'HR Lead', jobLocation: { address: { addressLocality: 'Tokyo', addressCountry: 'JP' } } }, 'https://acme.com/careers/jobs/2-hr');
   assert.equal(tokyo?.isUk, false);
+});
+
+test('public bodies: kinds, council slugs, domain guesses and protected-domain verification', async () => {
+  const { publicBodyKind, councilSlugs, publicDomainGuesses, isProtectedHost } = await import('./public-bodies');
+  assert.equal(publicBodyKind('leeds city council'), 'council');
+  assert.equal(publicBodyKind('leeds teaching hospitals nhs trust'), 'nhs');
+  assert.equal(publicBodyKind('university of leeds'), 'university');
+  assert.equal(publicBodyKind('acme robotics limited'), null);
+  assert.deepEqual(councilSlugs('leeds city council'), ['leeds', 'city-of-leeds']);
+  assert.equal(councilSlugs('london borough of tower hamlets')[0], 'tower-hamlets');
+  assert.equal(councilSlugs('kent county council')[0], 'kent');
+  assert.ok(publicDomainGuesses('university of leeds', 'university').includes('leeds.ac.uk'));
+  assert.ok(publicDomainGuesses('leeds city council', 'council').includes('leeds.gov.uk'));
+  assert.ok(isProtectedHost('www.leeds.gov.uk') && isProtectedHost('leedsth.nhs.uk') && !isProtectedHost('leeds.com'));
+  assert.ok(!candidateDomains('leeds city council').includes('leeds.com'), 'no brand guess for public bodies');
+
+  const base = { companyNumber: null, normalizedName: 'leeds city council', town: 'Leeds' };
+  assert.equal(verifyPage({ ...base, url: 'https://www.leeds.gov.uk/', html: '<title>Home | Leeds City Council</title>' }), 'public_domain');
+  assert.equal(verifyPage({ ...base, url: 'https://www.leeds.gov.uk/', html: '<title>Home</title><p>Welcome to Leeds City Council</p>' }), 'public_domain');
+  // Same name on an ordinary domain, or a protected domain that only mentions it in passing, is not enough.
+  assert.equal(verifyPage({ ...base, url: 'https://example.com/', html: '<title>Leeds City Council</title>' }), null);
+  assert.equal(verifyPage({ ...base, url: 'https://www.bradford.gov.uk/', html: '<title>Bradford</title><p>Working with Leeds City Council</p>' }), null);
+});
+
+test('robots.txt wildcards and Allow lines (Drupal-style file must not block the whole site)', () => {
+  const rules = parseRobotsRules('User-agent: *\nAllow: /core/*.css$\nDisallow: /core/\nDisallow: /*/media/oembed\nDisallow: /search/\nDisallow: /*.pdf$\n');
+  assert.ok(robotsAllows(rules, '/'));
+  assert.ok(robotsAllows(rules, '/jobs-skills-and-training'));
+  assert.ok(!robotsAllows(rules, '/en/media/oembed?x=1'));
+  assert.ok(!robotsAllows(rules, '/search/?q=x'));
+  assert.ok(!robotsAllows(rules, '/core/misc.js'));
+  assert.ok(robotsAllows(rules, '/core/style.css'), 'longer Allow beats shorter Disallow');
+  assert.ok(!robotsAllows(rules, '/files/report.pdf'));
+  assert.ok(robotsAllows(rules, '/files/report.pdf?download=1'), '$ anchors the end');
+  assert.ok(!robotsAllows(parseRobotsRules('User-agent: *\nDisallow: /\n'), '/'));
 });

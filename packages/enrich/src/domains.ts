@@ -1,3 +1,5 @@
+import { publicBodyKind } from './public-bodies';
+
 /** Words that describe the *type* of company rather than its name; dropped when guessing domains. */
 const SUFFIXES = new Set([
   'limited', 'ltd', 'plc', 'llp', 'lp', 'uk', 'gb', 'group', 'holdings', 'holding', 'company', 'co', 'the', 'and',
@@ -48,7 +50,8 @@ export function candidateDomains(normalizedName: string): string[] {
   // Brand on its own: "RHAELM Operations Limited" → rhaelm.com. Only for distinctive first words
   // (5+ letters, not generic). A brand domain can't pass the weak "domain is the name" check, so it
   // is only accepted when the site shows the company number or full registered name.
-  const brand = tokens.length > 1 && tokens[0].length >= 5 && !GENERIC.has(tokens[0]) && !/^\d/.test(tokens[0]) ? tokens[0] : null;
+  // Not for public bodies: "leeds city council" → leeds.com is never the council.
+  const brand = tokens.length > 1 && tokens[0].length >= 5 && !GENERIC.has(tokens[0]) && !/^\d/.test(tokens[0]) && !publicBodyKind(normalizedName) ? tokens[0] : null;
 
   const out: string[] = [];
   for (const tld of PRIMARY_TLDS) for (const base of main) out.push(`${base}.${tld}`);

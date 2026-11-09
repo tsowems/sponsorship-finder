@@ -7,6 +7,7 @@ import { extractLinks, htmlToText } from './html';
 import { fetchPage, resolvesPublicly, type FetchedPage } from './http';
 import { fetchJobs, type FetchedJob } from './jobs';
 import { legalPageCandidates, verifyPage, type VerifiedBy } from './verify';
+import { govukCouncilWebsite, nhsOdsWebsite, publicBodyKind, publicDomainGuesses } from './public-bodies';
 import { websiteByCompanyNumber, websitesByName } from './wikidata';
 
 export interface SponsorInput {
@@ -22,8 +23,8 @@ export interface SponsorInput {
 export interface Discovery {
   company: CompanyRecord | null;
   website: string | null;
-  websiteSource: 'wikidata' | 'wikidata_search' | 'domain_guess' | null;
-  websiteVerifiedBy: VerifiedBy | 'wikidata' | null;
+  websiteSource: 'wikidata' | 'govuk' | 'nhs_ods' | 'wikidata_search' | 'domain_guess' | null;
+  websiteVerifiedBy: VerifiedBy | 'wikidata' | 'govuk' | 'nhs_ods' | null;
   careersUrl: string | null;
   ats: AtsMatch | null;
   jobs: FetchedJob[] | null;
@@ -64,12 +65,13 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
     tried.add(host);
     const page = await fetchPage(url);
     if (trusted) {
-      // Wikidata matched on company number: authoritative even if the site blocks bots.
+      // Wikidata matched on company number, or GOV.UK's council list: authoritative even if the site blocks bots.
       out.website = originOf(page?.url ?? url);
       out.websiteSource = source;
-      out.websiteVerifiedBy = 'wikidata';
+      out.websiteVerifiedBy = source === 'govuk' || source === 'nhs_ods' ? source : 'wikidata';
       homepage = page;
-      log.push(`website: ${out.website} (wikidata by company number${page ? '' : ', page not fetchable'})`);
+      const label = { govuk: 'GOV.UK council list', nhs_ods: 'NHS organisation directory' }[source as string] ?? 'wikidata by company number';
+      log.push(`website: ${out.website} (${label}${page ? '' : ', page not fetchable'})`);
       return true;
     }
     if (!page) return false;
@@ -96,6 +98,22 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
   if (companyNumber) {
     const wd = await websiteByCompanyNumber(companyNumber);
     if (wd) await tryCandidate(wd, 'wikidata', true);
+  }
+  // Public bodies (councils, NHS, universities…): official sources and protected domains first.
+  const kind = publicBodyKind(s.normalizedName);
+  if (!out.website && kind === 'council') {
+    const gov = await govukCouncilWebsite(s.normalizedName, normalizeName);
+    if (gov) await tryCandidate(gov, 'govuk', true);
+  }
+  if (!out.website && kind === 'nhs') {
+    const nhs = await nhsOdsWebsite(s.normalizedName, normalizeName);
+    if (nhs) await tryCandidate(nhs, 'nhs_ods', true);
+  }
+  if (!out.website && kind) {
+    for (const d of publicDomainGuesses(s.normalizedName, kind)) {
+      const host = (await resolvesPublicly(d)) ? d : (await resolvesPublicly(`www.${d}`)) ? `www.${d}` : null;
+      if (host && (await tryCandidate(`https://${host}/`, 'domain_guess', false))) break;
+    }
   }
   if (!out.website) {
     for (const url of await websitesByName(s.name)) if (await tryCandidate(url, 'wikidata_search', false)) break;

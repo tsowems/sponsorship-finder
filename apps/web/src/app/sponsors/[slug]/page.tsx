@@ -156,7 +156,13 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
               <p className="text-xs text-slate-500">
                 {profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
                   ? 'Website confirmed using the company’s registration number.'
-                  : 'Website confirmed by the company’s registered name appearing on it.'}
+                  : profile.websiteVerifiedBy === 'govuk'
+                    ? 'Official council website, from GOV.UK’s list of local councils.'
+                    : profile.websiteVerifiedBy === 'nhs_ods'
+                      ? 'Official website, from the NHS organisation directory.'
+                      : profile.websiteVerifiedBy === 'public_domain'
+                        ? 'Official public-sector website (a protected address such as .gov.uk, .nhs.uk or .ac.uk) naming this organisation.'
+                        : 'Website confirmed by the company’s registered name appearing on it.'}
               </p>
             </div>
           ) : researched ? (
