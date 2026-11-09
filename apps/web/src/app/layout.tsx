@@ -23,9 +23,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="en-GB" className={`${brandSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         <SiteHeader siteName={SITE_NAME} />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:py-10">{children}</main>
-        <footer className="mt-8 border-t border-slate-200 bg-white">
-          <div className="mx-auto max-w-6xl space-y-2 px-4 py-6 text-xs leading-relaxed text-slate-500">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-6 sm:py-10">{children}</main>
+        <footer className="border-t border-slate-200 bg-white sm:mt-8">
+          <div className="mx-auto max-w-6xl space-y-2 px-4 py-5 text-xs leading-relaxed text-slate-500 sm:py-6">
             <p>
               Sponsor data from the Home Office{' '}
               <a href={REGISTER_URL} className="underline hover:text-slate-700" rel="noopener">
