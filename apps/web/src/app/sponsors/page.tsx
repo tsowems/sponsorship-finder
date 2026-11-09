@@ -96,7 +96,8 @@ async function Results({ searchParams }: { searchParams: Search }) {
       <Pagination page={input.page} totalPages={totalPages} href={(page) => buildHref('/sponsors', { ...input, status: input.status === 'active' ? undefined : input.status, page })} />
       {total > totalPages * PAGE_SIZE && (
         <p className="mt-3 text-center text-sm text-slate-500">
-          Showing the first {formatNumber(totalPages * PAGE_SIZE)} of {formatNumber(total)}. Add a company name or town to narrow it down.
+          Showing the first {formatNumber(totalPages * PAGE_SIZE)} of {formatNumber(total)}. Add a company name or town to narrow it down, or{' '}
+          <Link className="text-indigo-700 hover:underline" href="/browse">browse every sponsor A–Z or by town</Link>.
         </p>
       )}
     </div>

@@ -4,10 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserMenu } from './UserMenu';
 
-const NAV = [
+const NAV: { href: string; label: string; short?: string }[] = [
   { href: '/sponsors', label: 'Search' },
-  { href: '/changes', label: 'Latest changes' },
-  { href: '/about', label: 'About the data' },
+  { href: '/browse', label: 'Browse' },
+  { href: '/changes', label: 'Latest changes', short: 'Changes' },
+  { href: '/about', label: 'About the data', short: 'About' },
 ];
 
 export function SiteHeader({ siteName }: { siteName: string }) {
@@ -19,7 +20,7 @@ export function SiteHeader({ siteName }: { siteName: string }) {
           <BrandMark />
           <span className="text-lg font-bold tracking-tight text-slate-900">{siteName}</span>
         </Link>
-        <nav className="flex flex-wrap items-center gap-1 text-sm font-semibold">
+        <nav className="flex flex-wrap items-center gap-0.5 text-sm font-semibold sm:gap-1">
           {NAV.map((n) => {
             const active = path === n.href || path.startsWith(`${n.href}/`);
             return (
@@ -27,13 +28,20 @@ export function SiteHeader({ siteName }: { siteName: string }) {
                 key={n.href}
                 href={n.href}
                 aria-current={active ? 'page' : undefined}
-                className={`rounded-xl px-3 py-2 transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                className={`rounded-xl px-2 py-2 transition-colors sm:px-3 ${active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
               >
-                {n.label}
+                {n.short ? (
+                  <>
+                    <span className="sm:hidden">{n.short}</span>
+                    <span className="hidden sm:inline">{n.label}</span>
+                  </>
+                ) : (
+                  n.label
+                )}
               </Link>
             );
           })}
-          <span className="ml-1">
+          <span className="sm:ml-1">
             <UserMenu />
           </span>
         </nav>

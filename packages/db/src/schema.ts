@@ -96,6 +96,8 @@ export const sponsors = pgTable(
     // Prefix search ("de%") for 1-2 character type-ahead, where the trigram index can't help.
     index('sponsors_name_prefix_idx').using('btree', t.normalizedName.op('text_pattern_ops')),
     index('sponsors_status_town_idx').on(t.status, t.normalizedTown),
+    // Browse by town, A–Z with keyset paging (/browse/towns/[town]).
+    index('sponsors_status_town_name_idx').on(t.status, t.normalizedTown, t.normalizedName, t.id),
     index('sponsors_status_name_idx').on(t.status, t.normalizedName),
   ],
 );

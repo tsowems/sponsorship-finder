@@ -77,7 +77,7 @@ A company page that hasn't been researched (or whose last search found nothing m
 "Checking their website and open roles now…" and calls `POST /api/profile-request`. The website runs the same lookup
 there and then (usually 2–5 seconds, `maxDuration` 60 s) and the page refreshes itself with the result. Guards:
 
-- one lookup per company per 15 minutes (`sponsor_profiles.lookup_started_at`), at most 40 across the site per 10 minutes;
+- one lookup per company per 15 minutes (`sponsor_profiles.lookup_started_at`), at most 20 across the site per 10 minutes (each lookup also costs about one Vercel ISR write when the page is next viewed);
 - bots and crawlers (by user agent) and removed sponsors are only queued for the worker;
 - anything not done immediately stays queued (priority 5) for the next worker run.
 

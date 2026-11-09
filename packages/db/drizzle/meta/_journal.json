@@ -50,6 +50,13 @@
       "when": 1794248204921,
       "tag": "0006_recheck_not_found",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794248882084,
+      "tag": "0007_browse_town_index",
+      "breakpoints": true
     }
   ]
 }
