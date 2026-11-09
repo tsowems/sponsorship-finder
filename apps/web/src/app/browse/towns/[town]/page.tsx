@@ -38,8 +38,8 @@ export default async function TownPage({ params, searchParams }: PageProps<'/bro
   return (
     <div className="space-y-6">
       <nav className="text-sm text-slate-500">
-        <Link href="/browse" className="hover:underline">Browse</Link> /{' '}
-        <Link href="/browse/towns" className="hover:underline">Towns</Link> / {town.name}
+        <Link href="/browse" className="hover:underline">Sponsors by city</Link> /{' '}
+        <Link href="/browse/towns" className="hover:underline">All cities and towns</Link> / {town.name}
       </nav>
       <header className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Visa sponsors in {town.name}</h1>
