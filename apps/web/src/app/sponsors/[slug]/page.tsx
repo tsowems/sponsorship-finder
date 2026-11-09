@@ -56,8 +56,10 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const researched = profile && profile.status !== 'queued';
   // Opening the page looks the company up straight away (or re-tries a "not found" over an hour old).
   const lookUp = active && profileNeedsLookup(profile);
-  // Job-board searches only when we've checked and found no careers page (nothing stored; re-checked as usual).
-  const showJobBoards = active && Boolean(researched) && !profile?.careersUrl && !profile?.jobsCount;
+  // Job-board searches (display only; nothing stored, re-checks unchanged): full when we found no careers page
+  // or jobs, a one-line "also search on…" under the roles / careers link when we did.
+  const showJobBoards = active && Boolean(researched);
+  const foundJobsOrCareers = Boolean(profile?.careersUrl || profile?.jobsCount);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -152,7 +154,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                 ukJobsCount={profile.ukJobsCount}
                 hasCareersPage={Boolean(profile.careersUrl)}
               />
-              {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} />}
+              {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} compact={foundJobsOrCareers} />}
               <p className="text-xs text-slate-500">
                 {profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
                   ? 'Website confirmed using the company’s registration number.'
