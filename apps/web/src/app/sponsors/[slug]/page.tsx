@@ -7,6 +7,7 @@ import { EventPill } from '@/components/ChangeList';
 import { JobsPanel } from '@/components/JobsPanel';
 import { ProfileRequest } from '@/components/ProfileRequest';
 import { WatchButton } from '@/components/WatchButton';
+import { profileNeedsLookup } from '@sponsors/db';
 import { getSponsorBySlug } from '@/lib/data';
 import { formatDate } from '@/lib/format';
 import { SITE_URL } from '@/lib/site';
@@ -52,6 +53,8 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const webSearch = `https://www.google.com/search?q=${encodeURIComponent(`"${sponsor.name}" ${sponsor.town}`)}`;
   const routes = sponsor.routes.length ? sponsor.routes : ['Skilled Worker'];
   const researched = profile && profile.status !== 'queued';
+  // Opening the page looks the company up straight away (or re-tries an old "not found").
+  const lookUp = active && profileNeedsLookup(profile);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -131,7 +134,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
         <div className="space-y-8 md:col-span-2">
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Website and jobs</h2>
-          {!researched && <ProfileRequest sponsorId={sponsor.id} />}
+          {lookUp && <ProfileRequest sponsorId={sponsor.id} />}
           {profile?.website ? (
             <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
               <div className="flex flex-wrap gap-3">
@@ -159,7 +162,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
             </p>
           ) : (
             <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
-              We&apos;re looking up this organisation&apos;s website and open roles. Check back soon, or{' '}
+              We&apos;re looking up this organisation&apos;s website and open roles. If nothing appears, check back later, or{' '}
               <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">search the web ↗</a>
             </p>
           )}

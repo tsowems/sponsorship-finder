@@ -42,7 +42,7 @@ apps/web/src/components/   React components
 apps/web/src/lib/          data queries, auth, helpers
 apps/worker/src/register/  register download, parse, group, diff, import
 apps/worker/src/alerts/    alert email building + sending
-apps/worker/src/enrich/    website, careers page and jobs discovery
+packages/enrich/src/       website, careers page and jobs discovery (worker + website)
 packages/db/src/           database schema, connection, name normalisation
 packages/db/drizzle/       SQL migrations (generated; never edit by hand once applied)
 packages/email/src/        email sending, templates, unsubscribe tokens

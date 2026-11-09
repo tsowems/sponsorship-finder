@@ -45,9 +45,16 @@ export function candidateDomains(normalizedName: string): string[] {
   if (/\blimited\b/.test(legal)) extra.push(`${joined}limited`, `${joined}ltd`);
   extra.push(`${joined}uk`, `${joined}group`);
 
+  // Brand on its own: "RHAELM Operations Limited" → rhaelm.com. Only for distinctive first words
+  // (5+ letters, not generic). A brand domain can't pass the weak "domain is the name" check, so it
+  // is only accepted when the site shows the company number or full registered name.
+  const brand = tokens.length > 1 && tokens[0].length >= 5 && !GENERIC.has(tokens[0]) && !/^\d/.test(tokens[0]) ? tokens[0] : null;
+
   const out: string[] = [];
   for (const tld of PRIMARY_TLDS) for (const base of main) out.push(`${base}.${tld}`);
+  if (brand) out.push(`${brand}.com`, `${brand}.co.uk`);
   for (const tld of PRIMARY_TLDS) for (const base of extra) out.push(`${base}.${tld}`);
+  if (brand) out.push(`${brand}.uk`, `${brand}.io`);
   for (const tld of SECONDARY_TLDS) for (const base of [...main, ...extra]) out.push(`${base}.${tld}`);
   return [...new Set(out)].filter((domain) => domain.split('.')[0].length <= 63).slice(0, MAX_CANDIDATES);
 }

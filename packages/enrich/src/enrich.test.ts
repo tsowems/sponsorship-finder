@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { detectAts, findCareersLinks } from './careers';
+import { jobFromPosting, jobLinkCandidates, jobPostingsInHtml } from './careers-page';
 import { pickCompany } from './companies-house';
 import { candidateDomains, domainLabel } from './domains';
 import { extractLinks, htmlToText } from './html';
@@ -108,4 +109,38 @@ test('Workday: detection captures tenant, server and site; dates and locations a
   assert.equal(workdayPostedOn('Posted 30+ Days Ago', now)?.toISOString().slice(0, 10), '2026-10-08');
   assert.equal(workdayLocation('2 Locations', '/job/London/Engineer_R1'), 'London');
   assert.equal(workdayLocation('Leeds', '/job/X/Y'), 'Leeds');
+});
+
+test('brand-only domains are tried for distinctive names ("RHAELM Operations Limited" → rhaelm.com)', () => {
+  const d = candidateDomains('rhaelm operations limited');
+  assert.ok(d.includes('rhaelm.com') && d.includes('rhaelm.co.uk'), d.join(' '));
+  assert.ok(d.indexOf('rhaelmoperations.com') < d.indexOf('rhaelm.com'), 'full name is tried first');
+  assert.ok(!candidateDomains('care partners limited').includes('care.com'), 'generic first words are never guessed alone');
+  assert.ok(!candidateDomains('apex limited').includes('apex.com') || candidateDomains('apex limited')[0] === 'apex.co.uk', 'single-word names unchanged');
+});
+
+test('careers page: job advert links are picked out; navigation links are not', () => {
+  const html = `<a href="/careers">Careers</a><a href="/careers/jobs/8582485-compliance-analyst">Compliance Analyst</a>
+    <a href="/careers/jobs/executive-assistant-15">Executive Assistant</a><a href="/careers/life">Life at Acme</a>
+    <a href="/careers/jobs">View all jobs</a><a href="/careers/benefits">Benefits</a><a href="https://other.com/jobs/x-y">Elsewhere</a>`;
+  assert.deepEqual(jobLinkCandidates(extractLinks(html, 'https://acme.com/careers'), 'https://acme.com/careers'), [
+    'https://acme.com/careers/jobs/8582485-compliance-analyst',
+    'https://acme.com/careers/jobs/executive-assistant-15',
+  ]);
+});
+
+test('JobPosting JSON-LD (inside @graph) becomes a job with UK location', () => {
+  const html = `<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"Acme"},
+    {"@type":"JobPosting","@id":"https://acme.com/careers/jobs/1-analyst#job","title":"Compliance Analyst","datePosted":"2026-11-01",
+     "identifier":{"@type":"PropertyValue","value":"8582485"},
+     "jobLocation":{"@type":"Place","address":{"addressLocality":"London","addressCountry":"GB"}}}]}</script>`;
+  const [p] = jobPostingsInHtml(html);
+  const j = jobFromPosting(p, 'https://acme.com/careers/jobs/1-analyst');
+  assert.equal(j?.title, 'Compliance Analyst');
+  assert.equal(j?.externalId, '8582485');
+  assert.equal(j?.location, 'London, GB');
+  assert.equal(j?.isUk, true);
+  assert.equal(j?.postedAt?.toISOString().slice(0, 10), '2026-11-01');
+  const tokyo = jobFromPosting({ '@type': 'JobPosting', title: 'HR Lead', jobLocation: { address: { addressLocality: 'Tokyo', addressCountry: 'JP' } } }, 'https://acme.com/careers/jobs/2-hr');
+  assert.equal(tokyo?.isUk, false);
 });

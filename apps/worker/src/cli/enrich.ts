@@ -9,9 +9,8 @@
 import { parseArgs } from 'node:util';
 import { eq } from 'drizzle-orm';
 import { closeDb, getDb, sponsors } from '@sponsors/db';
-import { discover } from '../enrich/discover';
-import { refreshJobs, runEnrichment } from '../enrich/run';
-import { saveDiscovery } from '../enrich/store';
+import { discover, saveDiscovery } from '@sponsors/enrich';
+import { refreshJobs, runEnrichment } from '../enrich-run';
 import { revalidateSite } from '../revalidate';
 
 const { values } = parseArgs({
@@ -33,7 +32,7 @@ async function main() {
     if (!s) throw new Error(`No sponsor with slug ${values.sponsor}`);
     const d = await discover(s);
     console.log(`${s.name} (${s.town})\n  ${d.log.join('\n  ')}`);
-    if (d.jobs) for (const j of d.jobs.filter((j) => j.isUk).slice(0, 5)) console.log(`    · ${j.title}, ${j.location}`);
+    if (d.jobs) for (const j of d.jobs.slice(0, 8)) console.log(`    · ${j.title}, ${j.location ?? 'location not given'}${j.isUk ? ' (UK)' : ''}`);
     if (!values['dry-run']) {
       await saveDiscovery(s.id, d);
       await revalidateSite({ slugs: [s.slug] });
