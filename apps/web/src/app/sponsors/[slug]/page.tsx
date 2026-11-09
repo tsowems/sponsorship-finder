@@ -11,6 +11,7 @@ import { WatchButton } from '@/components/WatchButton';
 import { profileNeedsLookup } from '@sponsors/db';
 import { getSponsorBySlug } from '@/lib/data';
 import { getCurrentUser } from '@/lib/session';
+import { publicBodyKind } from '@sponsors/enrich';
 import { formatDate } from '@/lib/format';
 import { SITE_URL } from '@/lib/site';
 
@@ -51,6 +52,8 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const active = sponsor.status === 'active';
   const downgraded = sponsor.rating.startsWith('B');
 
+  // Councils, NHS bodies, universities…: not companies, so no Companies House link.
+  const publicBody = Boolean(publicBodyKind(sponsor.normalizedName)) && !profile?.companyNumber;
   const companiesHouse = profile?.companyNumber
     ? `https://find-and-update.company-information.service.gov.uk/company/${encodeURIComponent(profile.companyNumber)}`
     : `https://find-and-update.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(sponsor.name)}`;
@@ -232,14 +235,16 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <h2 className="mb-3 font-semibold">Find out more</h2>
             <ul className="space-y-2 text-sm">
-              <li>
-                <a className="text-indigo-700 hover:underline" href={companiesHouse} rel="noopener nofollow" target="_blank">
-                  {profile?.companyNumber ? `Companies House record (${profile.companyNumber}) ↗` : 'Look up on Companies House ↗'}
-                </a>
-                {profile?.companyStatus && profile.companyStatus !== 'active' && (
-                  <span className="ml-1 font-medium text-red-700">({profile.companyStatus.replace(/-/g, ' ')})</span>
-                )}
-              </li>
+              {!publicBody && (
+                <li>
+                  <a className="text-indigo-700 hover:underline" href={companiesHouse} rel="noopener nofollow" target="_blank">
+                    {profile?.companyNumber ? `Companies House record (${profile.companyNumber}) ↗` : 'Look up on Companies House ↗'}
+                  </a>
+                  {profile?.companyStatus && profile.companyStatus !== 'active' && (
+                    <span className="ml-1 font-medium text-red-700">({profile.companyStatus.replace(/-/g, ' ')})</span>
+                  )}
+                </li>
+              )}
               <li><a className="text-indigo-700 hover:underline" href={webSearch} rel="noopener nofollow" target="_blank">Search the web ↗</a></li>
             </ul>
           </div>

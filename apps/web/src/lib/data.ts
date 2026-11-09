@@ -1,6 +1,7 @@
 import { cacheLife, cacheTag } from 'next/cache';
 import { and, asc, count, desc, eq, gte, ilike, inArray, sql, type SQL } from 'drizzle-orm';
 import {
+  cleanTown,
   getDb,
   normalizeName,
   normalizeTown,
@@ -10,6 +11,8 @@ import {
   sponsors,
   type SponsorEventType,
 } from '@sponsors/db';
+
+import { findTownByName, getTowns } from './browse';
 
 export const PAGE_SIZE = 25;
 export const SITEMAP_CHUNK = 45_000;
@@ -84,9 +87,11 @@ export async function searchSponsors(input: SearchInput) {
   const nt = input.town ? normalizeTown(input.town) : '';
   const status = input.status ?? 'active';
 
+  // A town matches every spelling of that place ("London" also finds "London England", "Greater London"…).
+  const town = nt ? await findTownByName(nt) : null;
   const filters: (SQL | undefined)[] = [
     status === 'all' ? undefined : eq(sponsors.status, status),
-    nt ? eq(sponsors.normalizedTown, nt) : undefined,
+    nt ? (town ? inArray(sponsors.normalizedTown, [...new Set([nt, ...town.variants])]) : eq(sponsors.normalizedTown, nt)) : undefined,
     input.rating === 'B' ? sql`${sponsors.rating} like 'B%'` : input.rating === 'A' ? sql`${sponsors.rating} like 'A%'` : undefined,
   ];
   const where = and(...filters, nq ? ilike(sponsors.normalizedName, `%${escapeLike(nq)}%`) : undefined);
@@ -273,20 +278,16 @@ export interface TownSuggestion {
   count: number;
 }
 
-/** Towns starting with the typed text, biggest first. Each town once, in its most common spelling. */
-/** Not cached on the server; /api/towns sets CDN cache headers instead. */
+/** Towns starting with the typed text, biggest first, with spellings of the same place merged. */
+/** Uses the cached town list (no per-keystroke query); /api/towns also sets CDN cache headers. */
 export async function suggestTowns(q: string): Promise<TownSuggestion[]> {
   const nt = normalizeTown(q);
   if (nt.length < 2) return [];
-  const rows = await getDb()
-    .select({
-      town: sql<string>`mode() within group (order by ${sponsors.town})`,
-      count: count(),
-    })
-    .from(sponsors)
-    .where(and(eq(sponsors.status, 'active'), sql`${sponsors.normalizedTown} like ${`${escapeLike(nt)}%`}`))
-    .groupBy(sponsors.normalizedTown)
-    .orderBy(desc(count()))
-    .limit(8);
-  return rows.map((r) => ({ town: r.town, count: r.count }));
+  const clean = cleanTown(nt); // "saint he" → "st he"
+  const towns = await getTowns();
+  return towns
+    .filter((t) => normalizeTown(t.name).startsWith(nt) || t.slug.replace(/-/g, ' ').startsWith(clean))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+    .map((t) => ({ town: t.name, count: t.count }));
 }

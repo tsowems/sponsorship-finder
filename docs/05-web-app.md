@@ -49,7 +49,7 @@ The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-get
 | `/browse` | `app/browse/page.tsx` | Static, refreshed daily | A–Z letter counts + biggest towns (`lib/browse.ts`, cached) |
 | `/browse/[letter]` | `app/browse/[letter]/page.tsx` | **Rendered per request** | Licensed sponsors A–Z for one letter (`0-9`, `a`…`z`), 50 per page, `?after=<id>` / `?before=<id>` keyset paging (fast at any depth, reaches every sponsor). Paged views `noindex,follow` |
 | `/browse/towns` | `app/browse/towns/page.tsx` | Static, refreshed daily | Towns with 3+ licensed sponsors, A–Z |
-| `/browse/towns/[town]` | `app/browse/towns/[town]/page.tsx` | **Rendered per request** | One town's sponsors A–Z (slug = normalised town with `-`), same paging. Towns under 3 sponsors `noindex` |
+| `/browse/towns/[town]` | `app/browse/towns/[town]/page.tsx` | **Rendered per request** | One place's sponsors A–Z, same paging. Spellings of the same place are merged (`packages/db/src/towns.ts`: postcodes, "England", counties, "Greater London", "Ilford London" → Ilford, "saint" → "st"); other spellings' addresses redirect to the merged page. The search town filter and town suggestions use the same grouping. Under 3 sponsors `noindex` |
 | `/changes` | `app/changes/page.tsx` | Static shell + streamed list | Tabs via `?type=added\|removed\|downgraded\|readded` |
 | `/about` | `app/about/page.tsx` | Static | Data explanation + licence |
 | `/privacy` | `app/privacy/page.tsx` | Static | Privacy policy + cookie list (`#cookies`). Contact address from `CONTACT_EMAIL` |
