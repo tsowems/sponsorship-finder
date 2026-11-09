@@ -1,0 +1,1 @@
+CREATE INDEX "sponsors_status_town_name_idx" ON "sponsors" USING btree ("status","normalized_town","normalized_name","id");

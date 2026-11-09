@@ -22,7 +22,7 @@ export async function requestProfiles(db: Database, sponsorIds: number[], priori
 }
 
 /** Immediate lookups the website may start in any 10 minutes, across all visitors (the rest wait for the worker). */
-export const LIVE_LOOKUPS_PER_10_MIN = 40;
+export const LIVE_LOOKUPS_PER_10_MIN = 20;
 
 /**
  * Claim a sponsor for an immediate lookup by the website. True when the caller should look it up now:

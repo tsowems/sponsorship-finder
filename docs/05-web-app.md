@@ -46,6 +46,10 @@ The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-get
 | `/` | `app/page.tsx` | Static + cached data | Hero search, stats, latest new/removed |
 | `/sponsors` | `app/sponsors/page.tsx` | Static shell + streamed results | Reads `searchParams` → results in `<Suspense>`. Filtered views are `noindex` |
 | `/sponsors/[slug]` | `app/sponsors/[slug]/page.tsx` | **Rendered per request** (`await connection()`), complete HTML | The SEO page. Not stored as ISR pages (Vercel write limits); sponsor data cached in memory |
+| `/browse` | `app/browse/page.tsx` | Static, refreshed daily | A–Z letter counts + biggest towns (`lib/browse.ts`, cached) |
+| `/browse/[letter]` | `app/browse/[letter]/page.tsx` | **Rendered per request** | Licensed sponsors A–Z for one letter (`0-9`, `a`…`z`), 50 per page, `?after=<id>` / `?before=<id>` keyset paging (fast at any depth, reaches every sponsor). Paged views `noindex,follow` |
+| `/browse/towns` | `app/browse/towns/page.tsx` | Static, refreshed daily | Towns with 3+ licensed sponsors, A–Z |
+| `/browse/towns/[town]` | `app/browse/towns/[town]/page.tsx` | **Rendered per request** | One town's sponsors A–Z (slug = normalised town with `-`), same paging. Towns under 3 sponsors `noindex` |
 | `/changes` | `app/changes/page.tsx` | Static shell + streamed list | Tabs via `?type=added\|removed\|downgraded\|readded` |
 | `/about` | `app/about/page.tsx` | Static | Data explanation + licence |
 | `/privacy` | `app/privacy/page.tsx` | Static | Privacy policy + cookie list (`#cookies`). Contact address from `CONTACT_EMAIL` |
