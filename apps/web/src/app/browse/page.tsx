@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LetterStrip } from '@/components/Browse';
 import { getLetterCounts, getTowns, LETTERS, letterLabel } from '@/lib/browse';
+import { getIndustryCounts, INDUSTRIES } from '@/lib/industries';
 import { formatNumber } from '@/lib/format';
 
 export const metadata: Metadata = {
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 const TOP_TOWNS = 48;
 
 export default async function BrowsePage() {
-  const [counts, towns] = await Promise.all([getLetterCounts(), getTowns()]);
+  const [counts, towns, industries] = await Promise.all([getLetterCounts(), getTowns(), getIndustryCounts()]);
   const biggest = [...towns].sort((a, b) => b.count - a.count).slice(0, TOP_TOWNS);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
@@ -40,6 +41,22 @@ export default async function BrowsePage() {
               <Link href={`/browse/towns/${t.slug}`} prefetch={false} className="flex justify-between gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-indigo-50">
                 <span className="truncate text-slate-800">{t.name}</span>
                 <span className="text-slate-500 tabular-nums">{formatNumber(t.count)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold">By industry</h2>
+          <Link href="/industries" prefetch={false} className="text-sm font-medium text-indigo-700 hover:underline">All industries →</Link>
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          {INDUSTRIES.map((i) => (
+            <li key={i.slug}>
+              <Link href={`/industries/${i.slug}`} prefetch={false} className="inline-block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:border-indigo-300 hover:text-indigo-700">
+                {i.title} <span className="text-slate-400 tabular-nums">{formatNumber(industries[i.slug] ?? 0)}</span>
               </Link>
             </li>
           ))}

@@ -130,7 +130,8 @@ async function pageOf(where: SQL, cursor: Cursor) {
   return { rows, more, backwards, hasAnchor: Boolean(anchor) };
 }
 
-async function browse(where: SQL, cursor: Cursor): Promise<BrowsePage> {
+/** Keyset-paged A–Z list for any filter (letters, towns, industries). */
+export async function browsePage(where: SQL, cursor: Cursor): Promise<BrowsePage> {
   const [{ rows, more, backwards, hasAnchor }, [{ total }]] = await Promise.all([
     pageOf(where, cursor),
     getDb().select({ total: count() }).from(sponsors).where(where),
@@ -147,11 +148,11 @@ async function browse(where: SQL, cursor: Cursor): Promise<BrowsePage> {
 }
 
 export function browseLetter(letter: Letter, cursor: Cursor) {
-  return browse(and(eq(sponsors.status, 'active'), letterRange(letter))!, cursor);
+  return browsePage(and(eq(sponsors.status, 'active'), letterRange(letter))!, cursor);
 }
 
 export function browseTown(variants: string[], cursor: Cursor) {
-  return browse(and(eq(sponsors.status, 'active'), inArray(sponsors.normalizedTown, variants))!, cursor);
+  return browsePage(and(eq(sponsors.status, 'active'), inArray(sponsors.normalizedTown, variants))!, cursor);
 }
 
 /** Read ?after= / ?before= (positive integer ids). */
