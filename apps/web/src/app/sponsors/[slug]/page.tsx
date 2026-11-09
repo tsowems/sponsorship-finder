@@ -53,7 +53,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const webSearch = `https://www.google.com/search?q=${encodeURIComponent(`"${sponsor.name}" ${sponsor.town}`)}`;
   const routes = sponsor.routes.length ? sponsor.routes : ['Skilled Worker'];
   const researched = profile && profile.status !== 'queued';
-  // Opening the page looks the company up straight away (or re-tries an old "not found").
+  // Opening the page looks the company up straight away (or re-tries a "not found" over an hour old).
   const lookUp = active && profileNeedsLookup(profile);
 
   const jsonLd = {

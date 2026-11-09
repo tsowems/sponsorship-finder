@@ -11,7 +11,7 @@ const BOT = /bot|crawl|spider|slurp|headless|lighthouse|preview|facebookexternal
 
 /**
  * POST /api/profile-request { sponsorId }
- * Called by company pages we haven't researched yet (or where the last search found nothing over a day ago).
+ * Called by company pages we haven't researched yet (or where the last search found nothing over an hour ago).
  * Looks the company up there and then, so the visitor sees its website and jobs within seconds:
  *   { status: 'done', found: true|false }  → reload the page to show the result
  *   { status: 'queued' }                    → left for the background worker (busy, a bot, or already being looked up)
