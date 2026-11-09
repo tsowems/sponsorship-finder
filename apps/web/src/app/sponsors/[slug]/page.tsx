@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { RatingBadge, StatusBadge } from '@/components/Badges';
 import { EventPill } from '@/components/ChangeList';
+import { JobBoardLinks } from '@/components/JobBoardLinks';
 import { JobsPanel } from '@/components/JobsPanel';
 import { ProfileRequest } from '@/components/ProfileRequest';
 import { WatchButton } from '@/components/WatchButton';
@@ -55,6 +56,8 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const researched = profile && profile.status !== 'queued';
   // Opening the page looks the company up straight away (or re-tries a "not found" over an hour old).
   const lookUp = active && profileNeedsLookup(profile);
+  // Job-board searches only when we've checked and found no careers page (nothing stored; re-checked as usual).
+  const showJobBoards = active && Boolean(researched) && !profile?.careersUrl && !profile?.jobsCount;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -149,6 +152,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                 ukJobsCount={profile.ukJobsCount}
                 hasCareersPage={Boolean(profile.careersUrl)}
               />
+              {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} />}
               <p className="text-xs text-slate-500">
                 {profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
                   ? 'Website confirmed using the company’s registration number.'
@@ -156,10 +160,13 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
               </p>
             </div>
           ) : researched ? (
-            <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
-              We couldn&apos;t find a website we could confirm belongs to this organisation.{' '}
-              <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">Search the web ↗</a>
-            </p>
+            <div className="space-y-4 rounded-lg border border-dashed border-slate-300 bg-white p-4">
+              <p className="text-sm text-slate-600">
+                We couldn&apos;t find a website we could confirm belongs to this organisation.{' '}
+                <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">Search the web ↗</a>
+              </p>
+              {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} />}
+            </div>
           ) : (
             <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
               We&apos;re looking up this organisation&apos;s website and open roles. If nothing appears, check back later, or{' '}

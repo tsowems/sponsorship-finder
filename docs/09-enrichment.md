@@ -83,6 +83,15 @@ there and then (usually 2–5 seconds, `maxDuration` 60 s) and the page refreshe
 
 Needs `COMPANIES_HOUSE_API_KEY` in Vercel as well as GitHub for the best matches.
 
+## Job-board searches (no careers page)
+
+When a company has been checked and we found **no careers page and no jobs** (whether or not we found a website), its
+page shows links that open Indeed, LinkedIn, Glassdoor, Reed and Totaljobs' own searches for the employer's name and town
+(`components/JobBoardLinks.tsx`; trading name used for "X Ltd t/a Y", legal suffixes dropped). These are display only:
+nothing is stored, so the company still counts as having no careers page and is re-checked on the normal schedule
+(30 days for "not found", 60 days for a website without careers page, or an hour after a "not found" when someone
+opens the page). We don't scrape those sites: they have no public API for this and their terms forbid it.
+
 ## Domain guesses
 
 From the registered name minus company-type words: `acmerobotics.co.uk`, `acme-robotics.com`, … then the brand on its
