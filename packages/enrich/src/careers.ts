@@ -45,7 +45,7 @@ export function detectAts(...sources: string[]): AtsMatch | null {
 }
 
 const CAREERS_TEXT = /\b(careers?|jobs?|vacanc(?:y|ies)|join (?:us|our team|the team)|work (?:with|for) us|working (?:here|with us|at)|recruitment|opportunities|we.re hiring|current openings)\b/i;
-const CAREERS_HREF = /\/(careers?|jobs?|vacanc(?:y|ies)|join-?us|work-?with-?us|working-?(?:for|with|at)-?us|recruitment|opportunities)(?:[/?#.]|$)/i;
+const CAREERS_HREF = /\/(careers?|jobs?|vacanc(?:y|ies)|join-?us|work-?with-?us|working-?(?:for|with|at)-?us|recruitments?|opportunities)(?:[/?#.]|$)/i;
 const NOT_CAREERS = /job-?seekers?-?advice|blog|news|press|linkedin\.com|indeed\.|glassdoor|facebook|twitter|x\.com|instagram|youtube/i;
 
 /** Links that look like a careers page, best first. Links into a known hiring platform rank highest. */

@@ -20,7 +20,7 @@ export function coreTokens(normalizedName: string): string[] {
 /** Domain endings to try, most common for UK organisations first. */
 const PRIMARY_TLDS = ['co.uk', 'com'];
 const SECONDARY_TLDS = ['uk', 'co', 'org.uk', 'org'];
-export const MAX_CANDIDATES = 30;
+export const MAX_CANDIDATES = 40; // DNS lookups only; pages are fetched just for domains that exist
 
 /**
  * Plausible domains for a company, most likely first. Every guess is verified against the
@@ -55,7 +55,10 @@ export function candidateDomains(normalizedName: string): string[] {
   if (brand) out.push(`${brand}.com`, `${brand}.co.uk`);
   for (const tld of PRIMARY_TLDS) for (const base of extra) out.push(`${base}.${tld}`);
   if (brand) out.push(`${brand}.uk`, `${brand}.io`);
-  for (const tld of SECONDARY_TLDS) for (const base of [...main, ...extra]) out.push(`${base}.${tld}`);
+  // Less common endings: the plain name on every ending first (westhomecare.org), then the variants,
+  // so the most likely guesses are never cut off by the cap below.
+  for (const tld of SECONDARY_TLDS) for (const base of main) out.push(`${base}.${tld}`);
+  for (const tld of SECONDARY_TLDS) for (const base of extra) out.push(`${base}.${tld}`);
   return [...new Set(out)].filter((domain) => domain.split('.')[0].length <= 63).slice(0, MAX_CANDIDATES);
 }
 

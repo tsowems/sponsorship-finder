@@ -73,7 +73,7 @@ state codes are excluded).
 
 ## Looking a company up when someone opens its page
 
-A company page that hasn't been researched (or whose last search found nothing more than a day ago) shows
+A company page that hasn't been researched (or whose last search found nothing more than an hour ago) shows
 "Checking their website and open roles now…" and calls `POST /api/profile-request`. The website runs the same lookup
 there and then (usually 2–5 seconds, `maxDuration` 60 s) and the page refreshes itself with the result. Guards:
 
