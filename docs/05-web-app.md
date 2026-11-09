@@ -72,8 +72,6 @@ The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-get
 | `/api/unsubscribe?u=&t=` | POST | signed token | Unsubscribe page button + email one-click |
 | `/api/profile-request` | POST | — | Queue a company for website/jobs research (sent by company pages without a profile) |
 | `/api/revalidate` | POST | worker token | Refresh cached pages now: `{ slugs: [...] }` (immediately) or `{ all: true }` (in the background) |
-| `/api/collect` | POST | none (same-origin) | Cookieless page-view counter: see [11-admin.md](11-admin.md) |
-| `/admin`, `/admin/users` | page | admin email | Private dashboard: see [11-admin.md](11-admin.md) |
 | `/api/v1/sponsors`, `/api/v1/sponsors/{slug or id}`, `/api/v1/changes` | GET | API key | Data API for other apps: see [10-data-api.md](10-data-api.md) |
 
 Mutation endpoints check the request's `Origin` header matches the site (`isSameOrigin` in `lib/session.ts`).

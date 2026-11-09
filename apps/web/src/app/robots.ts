@@ -11,7 +11,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         userAgent: '*',
         allow: '/',
         // Search/filter variations and APIs: endless URL combinations, no SEO value, each costs a render.
-        disallow: ['/sponsors?', '/changes?', '/api/', '/login', '/account', '/unsubscribe', '/admin'],
+        disallow: ['/sponsors?', '/changes?', '/api/', '/login', '/account', '/unsubscribe'],
       },
       {
         // Heavy crawlers that don't send visitors: SEO-tool bots and AI *training* crawlers.

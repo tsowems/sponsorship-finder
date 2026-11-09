@@ -18,7 +18,6 @@ If you're new to the repo, read these in order. Each one builds on the last.
 | 8 | [How-to recipes](07-how-to.md) | Step-by-step guides for common changes |
 | 9 | [Websites, careers pages and jobs](09-enrichment.md) | How we find and verify company websites, careers pages and open roles |
 | 10 | [Data API](10-data-api.md) | Read-only JSON API (API key) for using the sponsor data in other apps |
-| 11 | [Admin area](11-admin.md) | Private dashboard: visitors, traffic, registered users |
 | 10 | [Domain glossary and decisions](08-glossary-and-decisions.md) | Visa/sponsor terms, why things are built this way, known limitations, ideas for later |
 
 ## Quick reference

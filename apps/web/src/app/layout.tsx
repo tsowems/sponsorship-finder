@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Geist_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import { CookieBanner, CookieSettingsButton } from '@/components/CookieBanner';
-import { PageViewTracker } from '@/components/PageViewTracker';
 import { SiteHeader } from '@/components/SiteHeader';
 import { IS_INDEXABLE, REGISTER_URL, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 import './globals.css';
@@ -50,7 +49,6 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           </div>
         </footer>
         <CookieBanner />
-        <PageViewTracker />
       </body>
     </html>
   );

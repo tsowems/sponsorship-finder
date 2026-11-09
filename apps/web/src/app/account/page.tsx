@@ -6,7 +6,6 @@ import { asc, desc, eq } from 'drizzle-orm';
 import { getDb, savedSearches, sponsors, watches } from '@sponsors/db';
 import { AddSearchForm, AlertsToggle, DeleteSearchButton, RemoveWatchButton, SignOutButton } from '@/components/AccountControls';
 import { RatingBadge, StatusBadge } from '@/components/Badges';
-import { isAdminUser } from '@/lib/admin';
 import { getCurrentUser } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'My alerts', robots: { index: false } };
@@ -41,15 +40,7 @@ async function Account() {
           <h1 className="text-2xl font-semibold tracking-tight">My alerts</h1>
           <p className="mt-1 text-sm text-slate-600">Signed in as {user.email}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Only rendered on the server for admins; nobody else ever sees this link. */}
-          {isAdminUser(user) && (
-            <Link href="/admin" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50">
-              Admin
-            </Link>
-          )}
-          <SignOutButton />
-        </div>
+        <SignOutButton />
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5">

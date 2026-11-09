@@ -238,31 +238,6 @@ export const jobs = pgTable(
   ],
 );
 
-/**
- * Cookieless page-view log for the admin dashboard. No cookies or device storage: a visitor is a
- * daily-rotating hash of IP + browser (see apps/web/src/lib/analytics.ts), so the same person
- * counts once per day and can't be followed across days. Query strings are never stored.
- */
-export const pageViews = pgTable(
-  'page_views',
-  {
-    id: bigserial('id', { mode: 'number' }).primaryKey(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    path: text('path').notNull(),
-    /** Host of the referring site ("google.com"), null for direct/internal. */
-    referrer: text('referrer'),
-    visitorId: text('visitor_id').notNull(),
-    /** ISO country code from the hosting provider's geo header, when available. */
-    country: text('country'),
-    /** 'mobile' | 'tablet' | 'desktop' */
-    device: text('device'),
-    /** Set when the visitor was signed in. */
-    signedIn: boolean('signed_in').notNull().default(false),
-  },
-  (t) => [index('page_views_created_idx').on(t.createdAt)],
-);
-
-export type PageView = typeof pageViews.$inferSelect;
 export type SponsorProfile = typeof sponsorProfiles.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type Sponsor = typeof sponsors.$inferSelect;
