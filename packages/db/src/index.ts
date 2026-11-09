@@ -31,4 +31,5 @@ export async function closeDb(): Promise<void> {
 }
 export * from './queue';
 export * from './towns';
+export * from './councils';
 export * from './internal-token';

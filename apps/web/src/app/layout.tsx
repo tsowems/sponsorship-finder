@@ -45,6 +45,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
               <Link href="/about" className="underline hover:text-slate-700">About the data</Link>
               <Link href="/faq" className="underline hover:text-slate-700">FAQ</Link>
               <Link href="/industries" className="underline hover:text-slate-700">Sponsors by industry</Link>
+              <Link href="/councils" className="underline hover:text-slate-700">Councils</Link>
               <Link href="/privacy" className="underline hover:text-slate-700">Privacy and cookies</Link>
               <CookieSettingsButton />
             </p>
