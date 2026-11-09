@@ -50,7 +50,10 @@ export default async function BrowsePage() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold">By industry</h2>
-          <Link href="/industries" prefetch={false} className="text-sm font-medium text-indigo-700 hover:underline">All industries →</Link>
+          <span className="flex gap-4">
+            <Link href="/councils" prefetch={false} className="text-sm font-medium text-indigo-700 hover:underline">Councils →</Link>
+            <Link href="/industries" prefetch={false} className="text-sm font-medium text-indigo-700 hover:underline">All industries →</Link>
+          </span>
         </div>
         <ul className="flex flex-wrap gap-2">
           {INDUSTRIES.map((i) => (
