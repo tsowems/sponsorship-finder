@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { Pager, RangeNote } from '@/components/Browse';
 import { SponsorList } from '@/components/SponsorList';
-import { browseTown, getTowns, MIN_INDEXED_TOWN, readCursor, townFromSlug } from '@/lib/browse';
+import { browseTown, findTownByName, getTowns, MIN_INDEXED_TOWN, readCursor, townFromSlug } from '@/lib/browse';
 import { formatNumber } from '@/lib/format';
 
 /** Rendered per request (like company pages): each ?after= cursor would otherwise be a stored ISR page. */
@@ -32,8 +32,13 @@ export default async function TownPage({ params, searchParams }: PageProps<'/bro
   await connection();
   const { town: slug } = await params;
   const town = await findTown(slug);
-  if (!town) notFound();
-  const page = await browseTown(townFromSlug(slug)!, readCursor(await searchParams));
+  if (!town) {
+    // Another spelling of a merged place (/browse/towns/greater-london → /browse/towns/london).
+    const merged = townFromSlug(slug) ? await findTownByName(townFromSlug(slug)!) : null;
+    if (merged) permanentRedirect(`/browse/towns/${merged.slug}`);
+    notFound();
+  }
+  const page = await browseTown(town.variants, readCursor(await searchParams));
 
   return (
     <div className="space-y-6">

@@ -15,6 +15,7 @@ export { CAREERS_PAGE_SOURCE, discover, type Discovery, type SponsorInput } from
 export { fetchJobs, type FetchedJob } from './jobs';
 export { jobsFromCareersPage } from './careers-page';
 export { companiesHouseEnabled } from './companies-house';
+export { isProtectedHost, publicBodyKind, type PublicBodyKind } from './public-bodies';
 export { markJobsChecked, replaceJobs, saveDiscovery, saveError } from './store';
 
 export const sponsorInputColumns = {

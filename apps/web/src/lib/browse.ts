@@ -1,6 +1,6 @@
 import { cacheLife, cacheTag } from 'next/cache';
-import { and, asc, count, desc, eq, gte, lt, sql, type SQL } from 'drizzle-orm';
-import { getDb, sponsors } from '@sponsors/db';
+import { and, asc, count, desc, eq, gte, inArray, lt, sql, type SQL } from 'drizzle-orm';
+import { getDb, mergeTowns, sponsors } from '@sponsors/db';
 
 /**
  * Browse pages: A–Z and by town, with "next / previous" paging that continues from the last
@@ -52,12 +52,14 @@ export async function getLetterCounts(): Promise<Record<Letter, number>> {
 
 export interface TownCount {
   slug: string;
-  /** Most common spelling on the register, e.g. "Milton Keynes". */
+  /** Usual spelling, e.g. "Milton Keynes". */
   name: string;
   count: number;
+  /** Every register spelling grouped into this place ("london", "london england", "greater london"…). */
+  variants: string[];
 }
 
-/** Every town with at least one licensed sponsor, A–Z. */
+/** Every place with at least one licensed sponsor, A–Z, with spellings of the same place merged (see @sponsors/db towns.ts). */
 export async function getTowns(): Promise<TownCount[]> {
   'use cache';
   cacheLife('days');
@@ -70,9 +72,15 @@ export async function getTowns(): Promise<TownCount[]> {
     })
     .from(sponsors)
     .where(and(eq(sponsors.status, 'active'), sql`${sponsors.normalizedTown} <> ''`))
-    .groupBy(sponsors.normalizedTown)
-    .orderBy(asc(sponsors.normalizedTown));
-  return rows.map((r) => ({ slug: townSlug(r.normalized), name: r.name, count: r.count }));
+    .groupBy(sponsors.normalizedTown);
+  return mergeTowns(rows).map((m) => ({ slug: townSlug(m.key), name: m.name, count: m.count, variants: m.variants }));
+}
+
+/** The merged place for a typed or normalised town ("Greater London" → London and all its spellings). */
+export async function findTownByName(normalizedTown: string): Promise<TownCount | null> {
+  if (!normalizedTown) return null;
+  const towns = await getTowns();
+  return towns.find((t) => t.variants.includes(normalizedTown)) ?? towns.find((t) => t.slug === townSlug(normalizedTown)) ?? null;
 }
 
 // ---------------------------------------------------------------- paged lists (not cached)
@@ -142,8 +150,8 @@ export function browseLetter(letter: Letter, cursor: Cursor) {
   return browse(and(eq(sponsors.status, 'active'), letterRange(letter))!, cursor);
 }
 
-export function browseTown(normalizedTown: string, cursor: Cursor) {
-  return browse(and(eq(sponsors.status, 'active'), eq(sponsors.normalizedTown, normalizedTown))!, cursor);
+export function browseTown(variants: string[], cursor: Cursor) {
+  return browse(and(eq(sponsors.status, 'active'), inArray(sponsors.normalizedTown, variants))!, cursor);
 }
 
 /** Read ?after= / ?before= (positive integer ids). */
