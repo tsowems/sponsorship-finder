@@ -1,7 +1,8 @@
 /**
- * Links that open the big job boards' own searches for this employer. Shown only when we couldn't
- * find a careers page. Display only: nothing is stored, so the company is still treated as having no
- * careers page and is re-checked on the usual schedule.
+ * Links that open the big job boards' own searches for this employer. Display only: nothing is stored,
+ * so they never count as a careers page and don't change when the company is re-checked.
+ *  - full: shown when we found no careers page or jobs
+ *  - compact: one "Also search on…" line under the roles / careers link we did find
  */
 
 /** The name employers usually advertise under: the trading name if given ("X Ltd t/a Y" → "Y"), without "Ltd", "PLC"… */
@@ -29,8 +30,24 @@ export function jobBoardSearches(name: string, town: string) {
   ];
 }
 
-export function JobBoardLinks({ name, town }: { name: string; town: string }) {
+export function JobBoardLinks({ name, town, compact = false }: { name: string; town: string; compact?: boolean }) {
   const q = advertisingName(name);
+  if (compact) {
+    return (
+      <p className="text-sm text-slate-600">
+        Also search for their jobs on{' '}
+        {jobBoardSearches(name, town).map((b, i, all) => (
+          <span key={b.label}>
+            <a href={b.url} target="_blank" rel="noopener nofollow" className="font-medium text-indigo-700 hover:underline">
+              {b.label}
+            </a>
+            {i < all.length - 2 ? ', ' : i === all.length - 2 ? ' or ' : ''}
+          </span>
+        ))}
+        . Some employers post roles there that aren&apos;t on their own site.
+      </p>
+    );
+  }
   return (
     <div className="space-y-2">
       <p className="text-sm text-slate-700">

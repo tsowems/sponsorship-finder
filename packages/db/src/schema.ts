@@ -192,9 +192,9 @@ export const sponsorProfiles = pgTable(
     sicCodes: text('sic_codes').array(),
 
     website: text('website'),
-    /** How we found it: 'wikidata' | 'wikidata_search' | 'domain_guess' */
+    /** How we found it: 'wikidata' | 'govuk' | 'nhs_ods' | 'wikidata_search' | 'domain_guess' */
     websiteSource: text('website_source'),
-    /** Why we trust it: 'wikidata' | 'company_number' | 'company_name' | 'domain_and_title' */
+    /** Why we trust it: 'wikidata' | 'govuk' | 'nhs_ods' | 'company_number' | 'company_name' | 'public_domain' | 'domain_and_title' */
     websiteVerifiedBy: text('website_verified_by'),
     careersUrl: text('careers_url'),
     /** 'greenhouse' | 'lever' | 'ashby' | 'workable' | 'recruitee' | 'teamtailor' | 'workday' | ... */

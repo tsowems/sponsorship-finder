@@ -1,8 +1,9 @@
 import { normalizeName, normalizeTown } from '@sponsors/db/normalize';
 import { coreTokens, domainLabel } from './domains';
 import { htmlToText, pageTitle } from './html';
+import { isProtectedHost } from './public-bodies';
 
-export type VerifiedBy = 'company_number' | 'company_name' | 'domain_and_title';
+export type VerifiedBy = 'company_number' | 'company_name' | 'domain_and_title' | 'public_domain';
 
 const PARKED = [
   /domain (?:name )?(?:is )?for sale/i, /buy this domain/i, /this domain (?:may be|is) for sale/i, /parked (?:free|domain)/i,
@@ -53,6 +54,18 @@ export function verifyPage(input: VerifyInput): VerifiedBy | null {
   const normText = ` ${normalizeName(text)} `;
   const hasSuffix = /\b(limited|plc|llp|cic)\b/.test(input.normalizedName);
   if (hasSuffix && input.normalizedName.length >= 10 && normText.includes(` ${input.normalizedName} `)) return 'company_name';
+
+  // Public bodies: a protected domain (.gov.uk, .nhs.uk, .ac.uk…) can only belong to a genuine public body. Accept
+  // it when the organisation's full name is in the page title, or on the page with the domain matching the name.
+  const host = new URL(input.url).hostname;
+  if (isProtectedHost(host) && input.normalizedName.split(' ').length >= 2) {
+    const title = ` ${normalizeName(pageTitle(input.html))} `;
+    const nameJoined = input.normalizedName.replace(/ /g, '');
+    const hostLabel = host.toLowerCase().replace(/^www\./, '').split('.')[0].replace(/-/g, '');
+    const named = title.includes(` ${input.normalizedName} `);
+    const related = hostLabel.length >= 3 && (nameJoined.includes(hostLabel) || hostLabel.includes(nameJoined));
+    if (named || (related && normText.includes(` ${input.normalizedName} `))) return 'public_domain';
+  }
 
   const core = coreTokens(input.normalizedName);
   const coreJoined = core.join('');

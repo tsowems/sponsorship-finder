@@ -94,12 +94,17 @@ export async function fetchJson<T>(url: string, opts: { timeoutMs?: number; head
 
 // ---------------------------------------------------------------- robots.txt
 
-const robotsCache = new Map<string, Promise<string[]>>();
+export interface RobotsRule {
+  allow: boolean;
+  path: string;
+}
 
-/** Disallow rules that apply to us (our agent or "*"). Simple prefix matching, which covers almost all sites. */
-export function parseRobots(text: string): string[] {
-  const groups: { agents: string[]; disallow: string[] }[] = [];
-  let current: { agents: string[]; disallow: string[] } | null = null;
+const robotsCache = new Map<string, Promise<RobotsRule[]>>();
+
+/** Allow/Disallow rules that apply to us (our agent's group, else "*"). */
+export function parseRobotsRules(text: string): RobotsRule[] {
+  const groups: { agents: string[]; rules: RobotsRule[] }[] = [];
+  let current: { agents: string[]; rules: RobotsRule[] } | null = null;
   let lastWasAgent = false;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.replace(/#.*$/, '').trim();
@@ -108,17 +113,39 @@ export function parseRobots(text: string): string[] {
     const field = m[1].toLowerCase();
     const value = m[2].trim();
     if (field === 'user-agent') {
-      if (!current || !lastWasAgent) groups.push((current = { agents: [], disallow: [] }));
+      if (!current || !lastWasAgent) groups.push((current = { agents: [], rules: [] }));
       current.agents.push(value.toLowerCase());
       lastWasAgent = true;
     } else {
       lastWasAgent = false;
-      if (field === 'disallow' && current && value) current.disallow.push(value);
+      if ((field === 'disallow' || field === 'allow') && current && value) current.rules.push({ allow: field === 'allow', path: value });
     }
   }
   const ours = groups.filter((g) => g.agents.some((a) => a.startsWith('sponsorshiphunterbot')));
   const chosen = ours.length ? ours : groups.filter((g) => g.agents.includes('*'));
-  return chosen.flatMap((g) => g.disallow);
+  return chosen.flatMap((g) => g.rules);
+}
+
+/** Disallow paths that apply to us (kept for tests and logging). */
+export function parseRobots(text: string): string[] {
+  return parseRobotsRules(text).filter((r) => !r.allow).map((r) => r.path);
+}
+
+/** Does a robots.txt path pattern match? Supports "*" (any characters) and a trailing "$" (end of path). */
+export function robotsPatternMatches(pattern: string, path: string): boolean {
+  const anchored = pattern.endsWith('$');
+  const body = (anchored ? pattern.slice(0, -1) : pattern).split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+  return new RegExp(`^${body}${anchored ? '$' : ''}`).test(path);
+}
+
+/** Google's rule: the most specific (longest) matching rule wins; on a tie, Allow wins. */
+export function robotsAllows(rules: RobotsRule[], path: string): boolean {
+  let best: RobotsRule | null = null;
+  for (const r of rules) {
+    if (!robotsPatternMatches(r.path, path)) continue;
+    if (!best || r.path.length > best.path.length || (r.path.length === best.path.length && r.allow)) best = r;
+  }
+  return !best || best.allow;
 }
 
 export async function isAllowedByRobots(url: string): Promise<boolean> {
@@ -126,12 +153,11 @@ export async function isAllowedByRobots(url: string): Promise<boolean> {
   let rules = robotsCache.get(u.origin);
   if (!rules) {
     rules = safeFetch(`${u.origin}/robots.txt`, { timeoutMs: 6000, maxBytes: 200_000, accept: 'text/plain' })
-      .then((p) => (p.status === 200 ? parseRobots(p.text) : []))
+      .then((p) => (p.status === 200 ? parseRobotsRules(p.text) : []))
       .catch(() => []);
     robotsCache.set(u.origin, rules);
   }
-  const path = u.pathname + u.search;
-  return !(await rules).some((rule) => path.startsWith(rule.replace(/\*.*$/, '')));
+  return robotsAllows(await rules, u.pathname + u.search);
 }
 
 /** Fetch an HTML page only if robots.txt allows it. Returns null when blocked, failing or not HTML. */
