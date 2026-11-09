@@ -8,6 +8,7 @@ export function SearchForm({
   status,
   size = 'md',
   showFilters = false,
+  onBrand = false,
 }: {
   q?: string;
   town?: string;
@@ -15,9 +16,12 @@ export function SearchForm({
   status?: string;
   size?: 'md' | 'lg';
   showFilters?: boolean;
+  /** Sitting on the violet banner: borderless inputs and a white button. */
+  onBrand?: boolean;
 }) {
-  const input =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20';
+  const input = `w-full rounded-xl border bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:outline-none ${
+    onBrand ? 'border-transparent shadow-sm focus:ring-4 focus:ring-white/40' : 'border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+  }`;
   return (
     <form action="/sponsors" method="get" role="search" className="w-full">
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -25,7 +29,9 @@ export function SearchForm({
         <TownAutocomplete defaultValue={town} className={`${input} ${size === 'lg' ? 'h-14 text-lg' : 'h-11'}`} />
         <button
           type="submit"
-          className={`rounded-lg bg-indigo-600 px-6 font-medium text-white hover:bg-indigo-700 ${size === 'lg' ? 'h-14 text-lg' : 'h-11'}`}
+          className={`rounded-xl px-6 font-semibold ${
+            onBrand ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+          } ${size === 'lg' ? 'h-14 text-lg' : 'h-11'}`}
         >
           Search
         </button>

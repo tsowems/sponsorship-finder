@@ -79,30 +79,32 @@ export function ChangeList({ rows }: { rows: ChangeRow[] }) {
 
 /**
  * Compact, scrollable list for the home page columns: name + town only (the heading already says
- * whether these are new or removed), grouped by date with sticky date headers.
+ * whether these are new or removed), grouped by date with sticky date headers. Green = added, red = removed.
  */
-export function CompactChangeList({ rows }: { rows: ChangeRow[] }) {
+export function CompactChangeList({ rows, tone }: { rows: ChangeRow[]; tone: 'green' | 'red' }) {
   const groups = new Map<string, ChangeRow[]>();
   for (const r of rows) {
     const k = dayKey(r.occurredAt);
     groups.set(k, [...(groups.get(k) ?? []), r]);
   }
+  const t =
+    tone === 'green'
+      ? { head: 'bg-emerald-50 text-emerald-800 border-emerald-100', dot: 'bg-emerald-500', hover: 'hover:bg-emerald-50/60' }
+      : { head: 'bg-red-50 text-red-800 border-red-100', dot: 'bg-red-500', hover: 'hover:bg-red-50/60' };
   return (
-    <div className="max-h-[28rem] overflow-y-auto overscroll-contain rounded-lg border border-slate-200 bg-white">
+    <div className="max-h-[28rem] overflow-y-auto overscroll-contain rounded-xl border border-slate-200">
       {[...groups.entries()].map(([day, items]) => (
         <section key={day}>
-          <h3 className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-4 py-1.5 text-xs font-semibold text-slate-500">
-            {formatLongDate(items[0].occurredAt)} · {items.length}
+          <h3 className={`sticky top-0 z-10 flex justify-between border-b px-4 py-1.5 text-xs font-semibold ${t.head}`}>
+            <span>{formatLongDate(items[0].occurredAt)}</span>
+            <span className="tabular-nums">{tone === 'green' ? '+' : '−'}{items.length}</span>
           </h3>
           <ul className="divide-y divide-slate-100">
             {items.map((r) => (
               <li key={r.id}>
-                <Link
-                  href={`/sponsors/${r.slug}`}
-                  prefetch={false}
-                  className="flex items-baseline justify-between gap-3 px-4 py-2.5 hover:bg-slate-50"
-                >
-                  <span className="min-w-0 truncate font-medium text-slate-900" title={r.name}>{r.name}</span>
+                <Link href={`/sponsors/${r.slug}`} prefetch={false} className={`flex items-center gap-3 px-4 py-2.5 ${t.hover}`}>
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${t.dot}`} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate font-medium text-slate-900" title={r.name}>{r.name}</span>
                   <span className="shrink-0 text-sm text-slate-500">{r.town}</span>
                 </Link>
               </li>

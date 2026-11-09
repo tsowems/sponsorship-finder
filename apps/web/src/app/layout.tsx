@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import { CookieBanner, CookieSettingsButton } from '@/components/CookieBanner';
-import { UserMenu } from '@/components/UserMenu';
+import { SiteHeader } from '@/components/SiteHeader';
 import { IS_INDEXABLE, REGISTER_URL, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 import './globals.css';
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
+const brandSans = Plus_Jakarta_Sans({ variable: '--font-brand-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -20,24 +20,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en-GB" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en-GB" className={`${brandSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <Link href="/" className="text-lg font-semibold tracking-tight text-slate-900">
-              {SITE_NAME}
-            </Link>
-            <nav className="flex items-center gap-5 text-sm font-medium text-slate-600">
-              <Link href="/sponsors" className="hover:text-slate-900">Search</Link>
-              <Link href="/changes" className="hover:text-slate-900">Latest changes</Link>
-              <Link href="/about" className="hover:text-slate-900">About the data</Link>
-              <UserMenu />
-            </nav>
-          </div>
-        </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
-        <footer className="border-t border-slate-200 bg-white">
-          <div className="mx-auto max-w-5xl space-y-2 px-4 py-6 text-xs leading-relaxed text-slate-500">
+        <SiteHeader siteName={SITE_NAME} />
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:py-10">{children}</main>
+        <footer className="mt-8 border-t border-slate-200 bg-white">
+          <div className="mx-auto max-w-6xl space-y-2 px-4 py-6 text-xs leading-relaxed text-slate-500">
             <p>
               Sponsor data from the Home Office{' '}
               <a href={REGISTER_URL} className="underline hover:text-slate-700" rel="noopener">
