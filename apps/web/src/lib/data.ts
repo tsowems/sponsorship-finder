@@ -123,7 +123,8 @@ export async function searchSponsors(input: SearchInput) {
 
 export type ChangeFilter = 'all' | 'added' | 'removed' | 'downgraded' | 'readded' | 'moved' | 'routes';
 
-export async function getChanges(filter: ChangeFilter, page: number, pageSize = 50) {
+/** `withinDays`: only changes from the last N days (used by the home page lists). */
+export async function getChanges(filter: ChangeFilter, page: number, pageSize = 50, withinDays?: number) {
   'use cache';
   cacheLife('days');
   cacheTag('sponsors');
@@ -138,7 +139,10 @@ export async function getChanges(filter: ChangeFilter, page: number, pageSize = 
     moved: eq(sponsorEvents.type, 'location_changed'),
     routes: eq(sponsorEvents.type, 'routes_changed'),
   };
-  const where = typeFilter[filter];
+  const where = and(
+    typeFilter[filter],
+    withinDays ? gte(sponsorEvents.occurredAt, sql`now() - make_interval(days => ${withinDays})`) : undefined,
+  );
 
   const [rows, [{ total }]] = await Promise.all([
     db
