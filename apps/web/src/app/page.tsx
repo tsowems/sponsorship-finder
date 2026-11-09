@@ -1,14 +1,17 @@
 import Link from 'next/link';
-import { ChangeList } from '@/components/ChangeList';
+import { CompactChangeList } from '@/components/ChangeList';
 import { SearchForm } from '@/components/SearchForm';
 import { getChanges, getOverview } from '@/lib/data';
 import { formatDate, formatNumber } from '@/lib/format';
 
+/** Most rows shown in each home page list (it scrolls); beyond this we link to /changes. */
+const HOME_LIST_MAX = 300;
+
 export default async function HomePage() {
   const [overview, added, removed] = await Promise.all([
     getOverview(),
-    getChanges('added', 1, 8),
-    getChanges('removed', 1, 8),
+    getChanges('added', 1, HOME_LIST_MAX, 30),
+    getChanges('removed', 1, HOME_LIST_MAX, 30),
   ]);
 
   const stats = [
@@ -46,20 +49,8 @@ export default async function HomePage() {
       </section>
 
       <div className="grid gap-8 md:grid-cols-2">
-        <section>
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold">New sponsors</h2>
-            <Link href="/changes?type=added" className="text-sm text-indigo-700 hover:underline">See all</Link>
-          </div>
-          {added.rows.length ? <ChangeList rows={added.rows} /> : <EmptyChanges since={overview.trackingSince} />}
-        </section>
-        <section>
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold">Removed from the register</h2>
-            <Link href="/changes?type=removed" className="text-sm text-indigo-700 hover:underline">See all</Link>
-          </div>
-          {removed.rows.length ? <ChangeList rows={removed.rows} /> : <EmptyChanges since={overview.trackingSince} />}
-        </section>
+        <ChangeColumn title="New sponsors" type="added" data={added} since={overview.trackingSince} />
+        <ChangeColumn title="Removed from the register" type="removed" data={removed} since={overview.trackingSince} />
       </div>
     </div>
   );
@@ -71,5 +62,28 @@ function EmptyChanges({ since }: { since: Date | null }) {
       No changes yet. We started tracking the register{since ? ` on ${formatDate(since)}` : ''}; changes appear here as each new
       daily file is published.
     </p>
+  );
+}
+
+function ChangeColumn(props: { title: string; type: 'added' | 'removed'; data: Awaited<ReturnType<typeof getChanges>>; since: Date | null }) {
+  const { title, type, data, since } = props;
+  return (
+    <section className="min-w-0">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <h2 className="text-lg font-semibold">
+          {title}{' '}
+          <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 align-middle text-sm font-medium text-slate-700 tabular-nums">
+            {formatNumber(data.total)}
+          </span>
+        </h2>
+        <span className="shrink-0 text-xs text-slate-500">last 30 days</span>
+      </div>
+      {data.rows.length ? <CompactChangeList rows={data.rows} /> : <EmptyChanges since={since} />}
+      {data.total > data.rows.length && (
+        <Link href={`/changes?type=${type}`} className="mt-2 inline-block text-sm text-indigo-700 hover:underline">
+          Showing the latest {formatNumber(data.rows.length)}. See all {formatNumber(data.total)}
+        </Link>
+      )}
+    </section>
   );
 }
