@@ -27,7 +27,15 @@ export interface Industry {
    * Care Inspectorate "Care at Home"), and drop name matches the regulators list only as something else (care homes).
    */
   careRegister?: 'home_care';
+  /** Leave out everyone in this other industry (Healthcare (non-NHS) leaves out NHS bodies). */
+  notIn?: string;
 }
+
+/** NHS bodies' industry slug (also linked from the header menu). */
+export const NHS_INDUSTRY = 'nhs-trusts-and-health-boards';
+
+/** Old industry addresses that now live elsewhere. */
+export const MOVED_INDUSTRIES: Record<string, string> = { 'healthcare-and-nhs': 'healthcare' };
 
 export const INDUSTRIES: Industry[] = [
   {
@@ -45,10 +53,19 @@ export const INDUSTRIES: Industry[] = [
     careRegister: 'home_care',
   },
   {
-    slug: 'healthcare-and-nhs', title: 'Healthcare and NHS', phrase: 'healthcare and the NHS',
-    intro: 'NHS trusts, hospitals, GP practices, clinics, dental practices and pharmacies licensed to sponsor Skilled Worker visas.',
+    slug: NHS_INDUSTRY, title: 'NHS trusts and health boards', phrase: 'the NHS',
+    intro: 'NHS trusts and foundation trusts, integrated care boards, ambulance services and health boards in England, Wales and Scotland, and Health and Social Care trusts in Northern Ireland, licensed to sponsor Skilled Worker visas. Most advertise their vacancies on NHS Jobs.',
+    sic: [],
+    words: ['nhs', 'health board', 'ambulance service', 'integrated care board', 'icb', 'health and social care trust', 'blood transfusion service'],
+    // Companies that only use "NHS" in their name ("… Ltd t/a NHS Dentist", "… Surgery (NHS)"), private ambulances, and an "ICB" that isn't one.
+    exclude: ['limited', 'plc', 'llp', 't a', 'trading as', 'dentist', 'dental', 'pharmacy', 'pharmacies', 'chemist', 'surgery', 'medical practice', 'optician', 'opticians', 'care home', 'homecare', 'home care', 'institute', 'reliance'],
+  },
+  {
+    slug: 'healthcare', title: 'Healthcare (non-NHS)', phrase: 'healthcare outside the NHS',
+    intro: 'Private hospitals, clinics, GP practices, dental practices, pharmacies and other healthcare providers licensed to sponsor Skilled Worker visas. NHS trusts and health boards have their own list.',
     sic: ['86'],
-    words: ['nhs', 'hospital', 'hospitals', 'clinic', 'clinics', 'medical', 'dental', 'dentist', 'dentistry', 'pharmacy', 'pharmacies', 'chemist', 'surgery', 'gp', 'physiotherapy', 'health board', 'integrated care board'],
+    words: ['hospital', 'hospitals', 'clinic', 'clinics', 'medical', 'dental', 'dentist', 'dentistry', 'pharmacy', 'pharmacies', 'chemist', 'surgery', 'gp', 'physiotherapy'],
+    notIn: NHS_INDUSTRY,
   },
   {
     slug: 'it-and-software', title: 'IT and software', phrase: 'IT and software',
@@ -119,17 +136,21 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** Licensed sponsors in an industry (name words or SIC code). */
 export function industryWhere(ind: Industry): SQL {
   const words = `\\m(${ind.words.map(escapeRe).join('|')})\\M`;
-  const sic = `^(${ind.sic.join('|')})`;
   const excluded = ind.exclude?.length ? sql`${sponsors.normalizedName} !~ ${`\\m(${ind.exclude.map(escapeRe).join('|')})\\M`}` : undefined;
-  const byNameOrSic = sql`(${sponsors.normalizedName} ~ ${words} or exists (
+  const bySic = ind.sic.length
+    ? sql` or exists (
       select 1 from sponsor_profiles p where p.sponsor_id = ${sponsors.id} and p.sic_codes is not null
-        and exists (select 1 from unnest(p.sic_codes) c where c ~ ${sic})))`;
+        and exists (select 1 from unnest(p.sic_codes) c where c ~ ${`^(${ind.sic.join('|')})`}))`
+    : sql``;
+  const byNameOrSic = sql`(${sponsors.normalizedName} ~ ${words}${bySic})`;
+  const other = ind.notIn ? findIndustry(ind.notIn) : null;
+  const notOther = other ? sql`not (${industryWhere(other)})` : undefined;
   if (ind.careRegister === 'home_care') {
     const registered = sql`exists (select 1 from ${careRegistrations} r where r.sponsor_id = ${sponsors.id})`;
     const homeCare = sql`exists (select 1 from ${careRegistrations} r where r.sponsor_id = ${sponsors.id} and r.home_care)`;
-    return and(eq(sponsors.status, 'active'), sql`(${homeCare} or (${byNameOrSic} and not ${registered}))`, excluded)!;
+    return and(eq(sponsors.status, 'active'), sql`(${homeCare} or (${byNameOrSic} and not ${registered}))`, excluded, notOther)!;
   }
-  return and(eq(sponsors.status, 'active'), byNameOrSic, excluded)!;
+  return and(eq(sponsors.status, 'active'), byNameOrSic, excluded, notOther)!;
 }
 
 /** Sponsor counts per industry (cached for everyone; refreshed after imports). */

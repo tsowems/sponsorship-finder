@@ -29,6 +29,7 @@ const MENUS: Menu[] = [
       { href: '/sponsors', label: 'Search', hint: 'Find a company by name or town' },
       { href: '/browse', label: 'By city', hint: 'Cities and towns, and A–Z' },
       { href: '/industries', label: 'By industry', hint: 'Care, NHS, IT, education and more' },
+      { href: '/industries/nhs-trusts-and-health-boards', label: 'NHS trusts', hint: 'Trusts, ICBs and health boards' },
       { href: '/councils', label: 'Councils', hint: 'England, Scotland and Wales' },
     ],
     paths: ['/sponsors', '/browse', '/industries', '/councils'],
