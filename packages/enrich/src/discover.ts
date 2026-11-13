@@ -1,6 +1,7 @@
 import { normalizeName } from '@sponsors/db/normalize';
 import { jobsFromCareersPage } from './careers-page';
-import { COMMON_CAREERS_PATHS, detectAts, FETCHABLE_ATS, findCareersLinks, looksLikeCareersPage, type AtsMatch } from './careers';
+import { canFetch, COMMON_CAREERS_PATHS, detectAts, findCareersLinks, looksLikeCareersPage, type AtsMatch } from './careers';
+import { isNhsEmployerCode, NHS_JOBS_EMPLOYER, nhsEmployerCode, nhsJobsResultsUrl } from './nhs-jobs';
 import { companiesHouseEnabled, findCompany, type CompanyRecord } from './companies-house';
 import { candidateDomains } from './domains';
 import { extractLinks, htmlToText } from './html';
@@ -145,9 +146,11 @@ export async function discover(s: SponsorInput, known: KnownLinks = {}): Promise
       if (await tryCandidate(`https://${domain}/`, 'domain_guess', false)) break;
     }
   }
+  // NHS bodies, GP practices, hospices…: their vacancies are on NHS Jobs, so look there even without a website.
+  const onNhsJobs = NHS_JOBS_EMPLOYER.test(s.normalizedName);
   if (!out.website) {
     log.push('website: not found');
-    if (!known.careers) return out;
+    if (!known.careers && !onNhsJobs) return out;
   }
 
   // 3. Careers page + hiring platform. A suggested careers page wins over our own search.
@@ -196,12 +199,26 @@ export async function discover(s: SponsorInput, known: KnownLinks = {}): Promise
       }
     }
   }
-  if (out.ats && !FETCHABLE_ATS.has(out.ats.provider) && out.ats.url !== out.careersUrl) out.vacanciesUrl = out.ats.url;
+  // NHS Jobs: the employer's code from its careers page links, or found by searching NHS Jobs for its name.
+  if (onNhsJobs || out.ats?.provider === 'nhsjobs') {
+    const linked = out.ats?.provider === 'nhsjobs' && isNhsEmployerCode(out.ats.slug) ? out.ats.slug : null;
+    const code = linked ?? (await nhsEmployerCode([s.name, out.company?.companyName].filter((n): n is string => Boolean(n))));
+    if (code) {
+      const url = nhsJobsResultsUrl(code);
+      out.ats = { provider: 'nhsjobs', slug: code, url };
+      out.vacanciesUrl = url;
+      out.careersUrl = out.careersUrl ?? url;
+      log.push(`nhs jobs: employer ${code}${linked ? ' (linked from their site)' : ' (found by name)'}`);
+    } else if (out.ats?.provider === 'nhsjobs') {
+      out.ats = null; // a general NHS Jobs link with no employer code: nothing specific to link to
+    }
+  }
+  if (out.ats && !canFetch(out.ats) && out.ats.url !== out.careersUrl) out.vacanciesUrl = out.ats.url;
   log.push(`careers: ${out.careersUrl ?? 'not found'}${known.careers ? ' (suggested)' : ''}${out.ats ? ` (${out.ats.provider}: ${out.ats.slug})` : ''}`);
   if (out.vacanciesUrl) log.push(`vacancies: ${out.vacanciesUrl}`);
 
   // 4. Live openings: from the hiring platform's API, else from adverts on the careers page itself
-  if (out.ats && FETCHABLE_ATS.has(out.ats.provider)) {
+  if (out.ats && canFetch(out.ats)) {
     out.jobs = await fetchJobs(out.ats.provider, out.ats.slug);
     out.jobsSource = out.jobs ? out.ats.provider : null;
   }

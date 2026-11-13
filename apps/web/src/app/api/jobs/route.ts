@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
   const db = getDb();
   const [profile] = await db
-    .select({ careersUrl: sponsorProfiles.careersUrl, vacanciesUrl: sponsorProfiles.vacanciesUrl, jobsCheckedAt: sponsorProfiles.jobsCheckedAt })
+    .select({ careersUrl: sponsorProfiles.careersUrl, vacanciesUrl: sponsorProfiles.vacanciesUrl, jobsCheckedAt: sponsorProfiles.jobsCheckedAt, atsProvider: sponsorProfiles.atsProvider })
     .from(sponsorProfiles)
     .where(eq(sponsorProfiles.sponsorId, sponsorId));
   const rows = await db
@@ -25,5 +25,5 @@ export async function GET(request: Request) {
     .where(and(eq(jobs.sponsorId, sponsorId), ownSiteJobs()))
     .orderBy(desc(jobs.isUk), sql`${jobs.postedAt} desc nulls last`, asc(jobs.title))
     .limit(50);
-  return json({ careersUrl: profile?.careersUrl ?? null, vacanciesUrl: profile?.vacanciesUrl ?? null, checkedAt: profile?.jobsCheckedAt ?? null, jobs: rows });
+  return json({ careersUrl: profile?.careersUrl ?? null, vacanciesUrl: profile?.vacanciesUrl ?? null, checkedAt: profile?.jobsCheckedAt ?? null, source: profile?.atsProvider ?? null, jobs: rows });
 }

@@ -82,13 +82,40 @@ export function publicDomainGuesses(normalizedName: string, kind: PublicBodyKind
 const ODS = 'https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations';
 
 /** An NHS organisation's website from the NHS Organisation Data Service (ODS), matched on its exact name. */
+/** Words that don't tell NHS bodies apart, and common short forms. */
+const NHS_FILLER = new Set(['the', 'nhs', 'foundation', 'trust', 'and', 'of', 'for']);
+const NHS_SHORT: Record<string, string[]> = { icb: ['integrated', 'care', 'board'], uhb: ['university', 'health', 'board'], hosp: ['hospital'] };
+
+/**
+ * Key words of an NHS body's name, order-free: "The Great Western Hospitals NHS Foundation Trust" and
+ * "GREAT WESTERN HOSPITALS NHS FOUNDATION TRUST" → "great hospitals western"; "Bradford District Care Trust NHS" and
+ * "Bradford District Care NHS Foundation Trust" → "bradford care district"; "NHS Kent and Medway ICB" →
+ * "board care integrated kent medway".
+ */
+export function nhsNameKey(normalizedName: string): string {
+  const words = normalizedName.split(' ').flatMap((w) => NHS_SHORT[w] ?? [w]).filter((w) => w && !NHS_FILLER.has(w));
+  return [...new Set(words)].sort().join(' ');
+}
+
+/** The distinctive words in their original order, for searching ("great western hospitals"). */
+const nhsSearchTerm = (normalizedName: string) =>
+  normalizedName.split(' ').flatMap((w) => NHS_SHORT[w] ?? [w]).filter((w) => w && !NHS_FILLER.has(w)).slice(0, 3).join(' ');
+
+/** Looks like an NHS organisation's own name in the NHS directory (not a GP surgery or pharmacy listed there). */
+const NHS_ORG_NAME = /\b(nhs|trust|board|ambulance|health and social care|commissioning support)\b/;
+
 export async function nhsOdsWebsite(normalizedName: string, normalize: (s: string) => string): Promise<string | null> {
-  // ODS searches by name fragment; the first few words are enough and avoid "&"/"and" differences.
-  const search = normalizedName.split(' ').slice(0, 4).join(' ');
+  const key = nhsNameKey(normalizedName);
+  const search = nhsSearchTerm(normalizedName);
+  if (key.split(' ').length < 2 || search.length < 4) return null;
+  // ODS searches by name fragment, so the distinctive words find the body whatever "The" / "Foundation" it has.
   const list = await fetchJson<{ Organisations?: { Name: string; Status: string; OrgLink: string }[] }>(
-    `${ODS}?Name=${encodeURIComponent(search)}&Status=Active&Limit=20`,
+    `${ODS}?Name=${encodeURIComponent(search)}&Status=Active&Limit=50`,
   ).catch(() => null);
-  const match = list?.Organisations?.find((o) => o.Status === 'Active' && normalize(o.Name) === normalizedName);
+  const match = list?.Organisations?.find((o) => {
+    const n = normalize(o.Name);
+    return o.Status === 'Active' && NHS_ORG_NAME.test(n) && nhsNameKey(n) === key;
+  });
   if (!match || !match.OrgLink.startsWith(`${ODS}/`)) return null;
   const detail = await fetchJson<{ Organisation?: { Contacts?: { Contact?: { type: string; value: string }[] } } }>(match.OrgLink).catch(() => null);
   const site = detail?.Organisation?.Contacts?.Contact?.find((c) => c.type === 'http')?.value;
