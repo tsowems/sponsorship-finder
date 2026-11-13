@@ -1,7 +1,7 @@
 import { cacheLife, cacheTag } from 'next/cache';
-import { and, asc, count, eq, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { careRegistrations, getDb, sponsors } from '@sponsors/db';
-import { browsePage, type Cursor } from './browse';
+import { browsePage, getTowns, type Cursor, type TownCount } from './browse';
 
 /**
  * Industry pages. A licensed sponsor belongs to an industry when either:
@@ -159,3 +159,42 @@ export async function industryPreview(ind: Industry, limit = 10) {
 export function browseIndustry(ind: Industry, cursor: Cursor) {
   return browsePage(industryWhere(ind), cursor);
 }
+
+export interface IndustryTown {
+  slug: string;
+  name: string;
+  count: number;
+}
+
+/**
+ * Cities and towns for one industry, biggest first, with spellings of the same place merged (same as /browse/towns).
+ * One small cached result per industry.
+ */
+export async function getIndustryTowns(slug: string): Promise<IndustryTown[]> {
+  'use cache';
+  cacheLife('days');
+  cacheTag('sponsors');
+  const ind = findIndustry(slug);
+  if (!ind) return [];
+  const [rows, towns] = await Promise.all([
+    getDb().select({ town: sponsors.normalizedTown, n: count() }).from(sponsors).where(industryWhere(ind)).groupBy(sponsors.normalizedTown),
+    getTowns(),
+  ]);
+  const byVariant = new Map<string, TownCount>();
+  for (const t of towns) for (const v of t.variants) byVariant.set(v, t);
+  const out = new Map<string, IndustryTown>();
+  for (const r of rows) {
+    const t = byVariant.get(r.town);
+    if (!t) continue;
+    const cur = out.get(t.slug) ?? { slug: t.slug, name: t.name, count: 0 };
+    cur.count += r.n;
+    out.set(t.slug, cur);
+  }
+  return [...out.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+/** One industry in one place, A–Z with next/previous paging. Not cached: small, indexed by town, and one per page. */
+export function browseIndustryTown(ind: Industry, town: TownCount, cursor: Cursor) {
+  return browsePage(and(industryWhere(ind), inArray(sponsors.normalizedTown, town.variants))!, cursor);
+}
+
