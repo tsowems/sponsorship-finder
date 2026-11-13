@@ -54,6 +54,7 @@ Repo → **Settings → Secrets and variables → Actions**.
 | `STAGING_BETTER_AUTH_SECRET` | staging secret from step 2 |
 | `RESEND_API_KEY` | from Resend (optional until you have it; emails are skipped/printed without it) |
 | `COMPANIES_HOUSE_API_KEY` | optional, recommended: free REST key from developer.company-information.service.gov.uk; improves website matching |
+| `REED_API_KEY` | optional: free key from reed.co.uk/developers/jobseeker; keeps watched companies' Reed adverts fresh |
 
 **Variables** tab → New repository variable:
 
@@ -95,6 +96,8 @@ Without Pro, the flow below still works; it just relies on you not pushing to `m
    | `API_KEYS` | optional: keys for the data API (`docs/10-data-api.md`) | optional |
    | `COMPANIES_HOUSE_API_KEY` | same key as the GitHub secret: company pages look companies up the moment someone opens them | ✓ |
    | `ADMIN_EMAILS` | your email (comma-separated for several): opens `/admin` (`docs/11-admin.md`) | optional |
+   | `REED_API_KEY` | same key as the GitHub secret: shows a company's own Reed adverts to signed-in users | ✓ |
+   | `REED_DAILY_LIMIT` | optional: Reed searches per day, shared by site and worker (default 900) | optional |
 
 4. Deploy. **Settings → Git**: Production Branch = `main`.
 5. **Settings → Domains**: add `staging.sponsorshiphunter.com` and set its **Git branch** to `staging`.

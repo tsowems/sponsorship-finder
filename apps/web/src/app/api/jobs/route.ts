@@ -1,5 +1,6 @@
-import { asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { getDb, jobs, sponsorProfiles } from '@sponsors/db';
+import { ownSiteJobs } from '@sponsors/enrich';
 import { getCurrentUser, json } from '@/lib/session';
 
 /**
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   const rows = await db
     .select({ id: jobs.id, title: jobs.title, location: jobs.location, department: jobs.department, url: jobs.url, isUk: jobs.isUk, remote: jobs.remote, postedAt: jobs.postedAt })
     .from(jobs)
-    .where(eq(jobs.sponsorId, sponsorId))
+    .where(and(eq(jobs.sponsorId, sponsorId), ownSiteJobs()))
     .orderBy(desc(jobs.isUk), sql`${jobs.postedAt} desc nulls last`, asc(jobs.title))
     .limit(50);
   return json({ careersUrl: profile?.careersUrl ?? null, vacanciesUrl: profile?.vacanciesUrl ?? null, checkedAt: profile?.jobsCheckedAt ?? null, jobs: rows });

@@ -307,6 +307,34 @@ export const linkSuggestions = pgTable(
 );
 
 export type LinkSuggestion = typeof linkSuggestions.$inferSelect;
+/**
+ * Job boards searched for a sponsor's own adverts (Reed for now). One row per sponsor and board; the jobs themselves are
+ * in `jobs` with `source` = the board. `checkedAt` is set when a check starts, so two visitors don't trigger two searches.
+ */
+export const boardChecks = pgTable(
+  'board_checks',
+  {
+    sponsorId: integer('sponsor_id').notNull().references(() => sponsors.id, { onDelete: 'cascade' }),
+    /** 'reed' */
+    board: text('board').notNull(),
+    checkedAt: timestamp('checked_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Adverts found on the last completed check (null while the first check is running or if it failed). */
+    found: integer('found'),
+  },
+  (t) => [primaryKey({ columns: [t.sponsorId, t.board] })],
+);
+
+/** Calls made to rate-limited outside services, per London day (e.g. Reed's daily allowance). */
+export const apiUsage = pgTable(
+  'api_usage',
+  {
+    day: text('day').notNull(), // YYYY-MM-DD, Europe/London
+    service: text('service').notNull(),
+    calls: integer('calls').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.service] })],
+);
+
 export type SponsorProfile = typeof sponsorProfiles.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type Sponsor = typeof sponsors.$inferSelect;

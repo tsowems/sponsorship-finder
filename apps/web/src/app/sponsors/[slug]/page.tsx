@@ -7,6 +7,7 @@ import { EventPill } from '@/components/ChangeList';
 import { JobBoardLinks } from '@/components/JobBoardLinks';
 import { JobsPanel } from '@/components/JobsPanel';
 import { ProfileRequest } from '@/components/ProfileRequest';
+import { ReedJobs } from '@/components/ReedJobs';
 import { SuggestLink } from '@/components/SuggestLink';
 import { WatchButton } from '@/components/WatchButton';
 import { profileNeedsLookup } from '@sponsors/db';
@@ -186,6 +187,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                   ukJobsCount={profile.ukJobsCount}
                   hasCareersPage={Boolean(profile.careersUrl)}
                 />
+                {active && <ReedJobs sponsorId={sponsor.id} />}
                 {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} compact={foundJobsOrCareers} />}
                 <p className="text-xs text-slate-500">
                   {!profile.website
@@ -210,6 +212,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                   We couldn&apos;t find a website we could confirm belongs to this organisation.{' '}
                   <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">Search the web ↗</a>
                 </p>
+                {active && <ReedJobs sponsorId={sponsor.id} />}
                 {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} />}
                 <SuggestLink sponsorId={sponsor.id} hasWebsite={false} hasCareers={false} />
               </div>

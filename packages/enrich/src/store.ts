@@ -1,7 +1,8 @@
-import { and, eq, lt, sql } from 'drizzle-orm';
+import { and, eq, lt, notInArray, sql } from 'drizzle-orm';
 import { getDb, jobs, sponsorProfiles } from '@sponsors/db';
 import type { Discovery } from './discover';
 import type { FetchedJob } from './jobs';
+import { REED_SOURCE } from './reed';
 
 const DAY = 24 * 60 * 60 * 1000;
 /** Re-check found websites every 60 days, misses every 30, errors after 1–7 days. */
@@ -75,7 +76,8 @@ export async function replaceJobs(sponsorId: number, source: string, fetched: Fe
           },
         });
     }
-    await tx.delete(jobs).where(and(eq(jobs.sponsorId, sponsorId), lt(jobs.lastSeenAt, runStart)));
+    // Job-board adverts (Reed…) are refreshed separately (boards.ts) and kept.
+    await tx.delete(jobs).where(and(eq(jobs.sponsorId, sponsorId), lt(jobs.lastSeenAt, runStart), notInArray(jobs.source, [REED_SOURCE])));
     await tx
       .update(sponsorProfiles)
       .set({ jobsCount: fetched.length, ukJobsCount: fetched.filter((j) => j.isUk).length, jobsCheckedAt: runStart })
