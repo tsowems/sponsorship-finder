@@ -187,3 +187,19 @@ repo secret.
   provider", CQC link). Only home-care changes trigger company page refreshes.
 - November 2026 numbers: 3,995 CQC and 244 Care Inspectorate home-care sponsors; 4,364 on the industry page (581 by name alone).
 
+## Suggested links
+
+Signed-in users can suggest a company's website or careers page from its company page ("Suggest a link",
+`components/SuggestLink.tsx` → `POST /api/suggestions`, max 10 per user per day). Stored in `link_suggestions`.
+
+- **Checked like our own search** (`packages/enrich/src/suggestions.ts`): links are tidied and refused if they're job boards,
+  social media, search engines or directories (`normalizeSuggestedUrl`). A website is accepted automatically when the page or its
+  privacy/terms/contact pages show the company number or full registered name (`verifyPage`); only then does the full lookup
+  run, so a check takes a few seconds. A careers page is accepted when it's on the confirmed website (subdomains count) or proves
+  the owner the same way. Anything else waits in **/admin/suggestions** (approve / reject; accepted ones can be removed).
+- **Kept on every re-check**: `discoverSponsor()` / `enrichSponsor()` pass accepted links into `discover(s, known)`. An
+  admin-approved website is trusted even if the site blocks bots; an automatically accepted one is re-verified. A suggested page
+  on a group site (".../our-care-homes/grosvenor-park/") is kept as the full page, not just the domain. A suggested careers page
+  wins over our own careers search, and works even when no website was found.
+- Company page wording: `websiteVerifiedBy = 'admin'` → "Website suggested by a visitor and checked by us".
+

@@ -33,3 +33,10 @@ To add a section: create `src/app/admin/<name>/page.tsx` (start it with `await r
 
 These are users' email addresses: use them only for the site (sign-in links and licence alerts). Marketing emails need
 separate consent. Don't export or share the list.
+
+## Suggested links (`/admin/suggestions`)
+
+Websites and careers pages users suggested that the automatic checks couldn't confirm. Open the link, check it belongs to the
+company, then **Approve** (the company is looked up again straight away and its page updates) or **Reject**. "Recent decisions"
+lists the last 30, with **Remove** to take an accepted link off again. The overview page shows how many are waiting.
+

@@ -11,7 +11,8 @@ export async function saveDiscovery(sponsorId: number, d: Discovery): Promise<vo
   const now = new Date();
   const values = {
     sponsorId,
-    status: (d.website ? 'done' : 'not_found') as 'done' | 'not_found',
+    // A careers page alone (suggested by a user) still counts as found.
+    status: (d.website || d.careersUrl ? 'done' : 'not_found') as 'done' | 'not_found',
     priority: 0,
     companyNumber: d.company?.companyNumber ?? null,
     companyName: d.company?.companyName ?? null,
@@ -26,7 +27,7 @@ export async function saveDiscovery(sponsorId: number, d: Discovery): Promise<vo
     atsProvider: d.ats?.provider ?? null,
     atsSlug: d.ats?.slug ?? null,
     checkedAt: now,
-    nextCheckAt: new Date(now.getTime() + (d.website ? RECHECK.found : RECHECK.notFound)),
+    nextCheckAt: new Date(now.getTime() + (d.website || d.careersUrl ? RECHECK.found : RECHECK.notFound)),
     attempts: 0,
     error: null,
   };

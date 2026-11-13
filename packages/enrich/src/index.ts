@@ -2,16 +2,17 @@
  * Finding sponsors' websites, careers pages and open roles. Used by the worker (background sweeps,
  * daily job refreshes) and by the website (looking up a company the moment someone opens its page).
  */
-import { and, eq } from 'drizzle-orm';
-import { getDb, jobs, sponsors } from '@sponsors/db';
+import { and, desc, eq } from 'drizzle-orm';
+import { getDb, jobs, linkSuggestions, sponsors } from '@sponsors/db';
 import { FETCHABLE_ATS, type AtsProvider } from './careers';
 import { jobsFromCareersPage } from './careers-page';
-import { CAREERS_PAGE_SOURCE, discover, type Discovery, type SponsorInput } from './discover';
+import { CAREERS_PAGE_SOURCE, discover, type Discovery, type KnownLinks, type SponsorInput } from './discover';
 import { fetchJobs, type FetchedJob } from './jobs';
 import { markJobsChecked, replaceJobs, saveDiscovery, saveError } from './store';
 
 export { FETCHABLE_ATS, type AtsProvider } from './careers';
-export { CAREERS_PAGE_SOURCE, discover, type Discovery, type SponsorInput } from './discover';
+export { CAREERS_PAGE_SOURCE, discover, type Discovery, type KnownLinks, type SponsorInput } from './discover';
+export { checkSuggestion, normalizeSuggestedUrl, type SuggestionCheck } from './suggestions';
 export { fetchJobs, type FetchedJob } from './jobs';
 export { jobsFromCareersPage } from './careers-page';
 export { companiesHouseEnabled } from './companies-house';
@@ -27,12 +28,32 @@ export const sponsorInputColumns = {
   normalizedTown: sponsors.normalizedTown,
 };
 
+/** Accepted user suggestions for a sponsor: the newest accepted website and careers page. */
+export async function knownLinks(sponsorId: number): Promise<KnownLinks> {
+  const rows = await getDb()
+    .select({ kind: linkSuggestions.kind, url: linkSuggestions.url, acceptedBy: linkSuggestions.acceptedBy })
+    .from(linkSuggestions)
+    .where(and(eq(linkSuggestions.sponsorId, sponsorId), eq(linkSuggestions.status, 'accepted')))
+    .orderBy(desc(linkSuggestions.reviewedAt), desc(linkSuggestions.id));
+  const website = rows.find((r) => r.kind === 'website');
+  const careers = rows.find((r) => r.kind === 'careers');
+  return {
+    website: website ? { url: website.url, trusted: website.acceptedBy === 'admin' } : undefined,
+    careers: careers?.url,
+  };
+}
+
+/** `discover` plus any links users suggested and we accepted. Use this rather than `discover` when saving results. */
+export async function discoverSponsor(s: SponsorInput): Promise<Discovery> {
+  return discover(s, await knownLinks(s.id));
+}
+
 /** Look up one sponsor and save what we find (errors are saved too). Returns null if the sponsor doesn't exist. */
 export async function enrichSponsor(sponsorId: number): Promise<Discovery | null> {
   const [s] = await getDb().select(sponsorInputColumns).from(sponsors).where(eq(sponsors.id, sponsorId));
   if (!s) return null;
   try {
-    const d = await discover(s);
+    const d = await discoverSponsor(s);
     await saveDiscovery(s.id, d);
     return d;
   } catch (err) {

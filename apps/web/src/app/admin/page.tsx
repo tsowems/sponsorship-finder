@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { UsersTable } from '@/components/admin/UsersTable';
 import { requireAdmin } from '@/lib/admin';
-import { getUserStats, listUsers } from '@/lib/admin-data';
+import { getUserStats, listUsers, pendingSuggestions } from '@/lib/admin-data';
 import { formatNumber } from '@/lib/format';
 
 export default function AdminHome() {
@@ -15,7 +15,7 @@ export default function AdminHome() {
 
 async function Overview() {
   await requireAdmin();
-  const [stats, latest] = await Promise.all([getUserStats(), listUsers({ page: 1, limit: 10 })]);
+  const [stats, latest, toReview] = await Promise.all([getUserStats(), listUsers({ page: 1, limit: 10 }), pendingSuggestions()]);
   const cards = [
     { label: 'Users', value: stats.total },
     { label: 'Joined today', value: stats.today },
@@ -32,6 +32,11 @@ async function Overview() {
         <p className="text-xs font-bold tracking-[0.18em] text-slate-500 uppercase">Admin</p>
         <h1 className="text-3xl font-extrabold tracking-tight">Overview</h1>
       </div>
+      {toReview > 0 && (
+        <Link href="/admin/suggestions" className="block rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900 hover:bg-amber-100">
+          {formatNumber(toReview)} suggested {toReview === 1 ? 'link is' : 'links are'} waiting for review →
+        </Link>
+      )}
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <li key={c.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

@@ -74,3 +74,9 @@ export async function listUsers(opts: { q?: string; page: number; sort?: UserSor
     ),
   };
 }
+
+/** Suggested links waiting for an admin. */
+export async function pendingSuggestions(): Promise<number> {
+  const [r] = await rows<{ n: string }>(sql`select count(*) as n from link_suggestions where status = 'pending'`);
+  return Number(r?.n ?? 0);
+}
