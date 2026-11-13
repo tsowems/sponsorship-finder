@@ -20,6 +20,8 @@ export interface Industry {
   sic: string[];
   /** Whole words/phrases in the normalised name. */
   words: string[];
+  /** Whole words/phrases that rule a name out ("domiciliary" opticians, a schools charity called "home support"). */
+  exclude?: string[];
 }
 
 export const INDUSTRIES: Industry[] = [
@@ -28,6 +30,13 @@ export const INDUSTRIES: Industry[] = [
     intro: 'Care homes, nursing homes, home care and supported living providers licensed to sponsor Skilled Worker visas, including care workers and senior care workers where the role is eligible.',
     sic: ['87', '88'],
     words: ['care home', 'care homes', 'nursing home', 'nursing homes', 'home care', 'homecare', 'domiciliary', 'care services', 'residential care', 'supported living', 'care agency', 'healthcare services', 'care group', 'care solutions'],
+  },
+  {
+    slug: 'home-care-domiciliary', title: 'Home care (domiciliary)', phrase: 'home care',
+    intro: 'Home care and domiciliary care agencies licensed to sponsor Skilled Worker visas. Carers visit clients in their own homes, so many of these roles ask for a full UK driving licence and access to a car.',
+    sic: ['8810'],
+    words: ['domiciliary', 'home care', 'homecare', 'care at home', 'live in care', 'livein care', 'home support', 'care in the home', 'home carers', 'visiting care'],
+    exclude: ['specsavers', 'opticians', 'optician', 'eyecare', 'dental', 'school home support'],
   },
   {
     slug: 'healthcare-and-nhs', title: 'Healthcare and NHS', phrase: 'healthcare and the NHS',
@@ -105,11 +114,13 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export function industryWhere(ind: Industry): SQL {
   const words = `\\m(${ind.words.map(escapeRe).join('|')})\\M`;
   const sic = `^(${ind.sic.join('|')})`;
+  const excluded = ind.exclude?.length ? sql`${sponsors.normalizedName} !~ ${`\\m(${ind.exclude.map(escapeRe).join('|')})\\M`}` : undefined;
   return and(
     eq(sponsors.status, 'active'),
     sql`(${sponsors.normalizedName} ~ ${words} or exists (
       select 1 from sponsor_profiles p where p.sponsor_id = ${sponsors.id} and p.sic_codes is not null
         and exists (select 1 from unnest(p.sic_codes) c where c ~ ${sic})))`,
+    excluded,
   )!;
 }
 
