@@ -19,6 +19,8 @@ export interface ServiceRecord {
   providerId: string;
   providerName: string;
   homeCare: boolean;
+  /** CQC location ID (used to look up the service's rating). */
+  locationId?: string;
   /** Address, town and council area of the service: used to check the sponsor's town. */
   place: string;
 }

@@ -70,7 +70,7 @@ export async function getSponsorBySlug(slug: string) {
 
   // Home-care registrations with CQC / the Care Inspectorate (refreshed monthly by the worker's `care` job).
   const homeCare = await db
-    .select({ regulator: careRegistrations.regulator, providerId: careRegistrations.providerId, providerName: careRegistrations.providerName, homeCareServices: careRegistrations.homeCareServices })
+    .select({ regulator: careRegistrations.regulator, providerId: careRegistrations.providerId, providerName: careRegistrations.providerName, homeCareServices: careRegistrations.homeCareServices, rating: careRegistrations.rating })
     .from(careRegistrations)
     .where(and(eq(careRegistrations.sponsorId, sponsor.id), eq(careRegistrations.homeCare, true)));
 

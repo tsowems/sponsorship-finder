@@ -263,6 +263,11 @@ export const careRegistrations = pgTable(
     homeCareServices: integer('home_care_services').notNull(),
     /** 'name_and_town' (same name, a service in the sponsor's town) | 'company_name' (same registered company name) */
     matchedBy: text('matched_by').notNull(),
+    /**
+     * CQC overall ratings of the provider's home-care services, e.g. "Good" or "2 Good, 1 Requires improvement"
+     * ("Not yet rated" for services not inspected yet). Null when unknown (Scotland, or the ratings file wasn't read).
+     */
+    rating: text('rating'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.sponsorId, t.regulator] }), index('care_registrations_home_care_idx').on(t.homeCare, t.sponsorId)],
