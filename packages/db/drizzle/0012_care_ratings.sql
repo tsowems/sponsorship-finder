@@ -1,0 +1,1 @@
+ALTER TABLE "care_registrations" ADD COLUMN "rating" text;

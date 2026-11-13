@@ -35,6 +35,16 @@ const hrefs = (html: string) => [...html.matchAll(/href="([^"]+)"/g)].map((m) =>
 
 // ---------------------------------------------------------------- England (CQC)
 
+/** The ratings spreadsheet's link on the same CQC page. */
+export async function cqcRatingsUrl(): Promise<string> {
+  const html = await (await get(CQC_PAGE, 30_000)).text();
+  const url = hrefs(html).find((h) => /Latest_ratings\.ods$/i.test(h));
+  if (!url) throw new Error('CQC: no ratings spreadsheet link found on the data page');
+  return new URL(url, CQC_PAGE).toString();
+}
+
+export { USER_AGENT as CARE_USER_AGENT };
+
 export async function cqcDirectoryUrl(): Promise<string> {
   const html = await (await get(CQC_PAGE, 30_000)).text();
   const url = hrefs(html).find((h) => /CQC_directory\.csv$/i.test(h));
@@ -52,7 +62,7 @@ export function parseCqcDirectory(text: string): ServiceRecord[] {
     if (i < 0) throw new Error(`CQC: column "${name}" missing`);
     return i;
   };
-  const [type, provider, providerId, address, la] = [col('Service types'), col('Provider name'), col('CQC Provider ID'), col('Address'), col('Local authority')];
+  const [type, provider, providerId, address, la, locationId] = [col('Service types'), col('Provider name'), col('CQC Provider ID'), col('Address'), col('Local authority'), col('CQC Location ID')];
   return rows
     .slice(h + 1)
     .filter((r) => r[provider] && r[providerId])
@@ -61,6 +71,7 @@ export function parseCqcDirectory(text: string): ServiceRecord[] {
       providerId: r[providerId],
       providerName: r[provider],
       homeCare: /homecare agencies/i.test(r[type] ?? ''),
+      locationId: r[locationId],
       place: `${r[address] ?? ''} ${r[la] ?? ''}`,
     }));
 }

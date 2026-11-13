@@ -121,6 +121,14 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
               </dd>
             </div>
           )}
+          {cqc?.rating && (
+            <div>
+              <dt className="text-slate-500">CQC rating</dt>
+              <dd className="font-medium text-slate-900">
+                {cqc.rating === 'Not yet rated' ? <span className="font-normal text-slate-600">Not yet inspected</span> : <CqcRating text={cqc.rating} />}
+              </dd>
+            </div>
+          )}
           {profile?.incorporatedOn && (
             <div>
               <dt className="text-slate-500">Incorporated</dt>
@@ -255,6 +263,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
 
         <aside className="space-y-4">
           <WatchButton sponsorId={sponsor.id} slug={sponsor.slug} />
+          {(!publicBody || cqc || signedIn) && (
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <h2 className="mb-3 font-semibold">Find out more</h2>
             <ul className="space-y-2 text-sm">
@@ -275,9 +284,12 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                   </a>
                 </li>
               )}
-              <li><a className="text-indigo-700 hover:underline" href={webSearch} rel="noopener nofollow" target="_blank">Search the web ↗</a></li>
+              {signedIn && (
+                <li><a className="text-indigo-700 hover:underline" href={webSearch} rel="noopener nofollow" target="_blank">Search the web ↗</a></li>
+              )}
             </ul>
           </div>
+          )}
           {sameName.length > 0 && (
             <div className="rounded-lg border border-slate-200 bg-white p-4">
               <h2 className="mb-3 font-semibold">Same name, other locations</h2>
@@ -322,3 +334,20 @@ function SignInForCompanyLinks(props: { slug: string; researched: boolean; websi
     </div>
   );
 }
+
+/** "Good" / "Good (all 3 services)" / "2 Good, 1 Requires improvement", with each rating word in CQC's colours. */
+function CqcRating({ text }: { text: string }) {
+  const tone: Record<string, string> = {
+    Outstanding: 'text-emerald-700',
+    Good: 'text-emerald-700',
+    'Requires improvement': 'text-amber-700',
+    Inadequate: 'text-red-700',
+  };
+  const parts = text.split(/(Outstanding|Good|Requires improvement|Inadequate)/);
+  return (
+    <>
+      {parts.map((p, i) => (tone[p] ? <span key={i} className={tone[p]}>{p}</span> : <span key={i} className="font-normal text-slate-600">{p}</span>))}
+    </>
+  );
+}
+

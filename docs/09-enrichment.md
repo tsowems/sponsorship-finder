@@ -185,7 +185,13 @@ repo secret.
 - **Used by**: the "Home care (domiciliary)" industry (`careRegister: 'home_care'` in `lib/industries.ts`: registered home-care
   providers, plus name/SIC matches that no regulator lists as something else) and the company page ("Registered home care
   provider", CQC link). Only home-care changes trigger company page refreshes.
-- November 2026 numbers: 3,995 CQC and 244 Care Inspectorate home-care sponsors; 4,364 on the industry page (581 by name alone).
+- **CQC ratings** (`care/ratings.ts`): CQC publishes ratings only as a ~28 MB .ods (a ~1.1 GB XML inside). The job downloads it,
+  streams `content.xml` through `unzip -p` and reads the "Locations" sheet (~10 s), keeping the overall rating of each
+  *home-care* location (location IDs from the directory CSV), summarised per provider ("Good", "Good (all 3 services)",
+  "2 Good, 1 Requires improvement", "Not yet rated"). Stored in `care_registrations.rating`; shown as "CQC rating" on the
+  company page. If the file can't be read, last month's ratings are kept. Local: `--cqc-ratings-file ratings.ods`.
+- November 2026 numbers: 3,995 CQC and 244 Care Inspectorate home-care sponsors; 4,364 on the industry page (581 by name alone);
+  2,782 with a CQC rating, 1,213 registered but not yet inspected.
 
 ## Suggested links
 

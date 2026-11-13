@@ -5,51 +5,55 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { UserMenu } from './UserMenu';
 
-interface NavItem {
+interface MenuItem {
   href: string;
   label: string;
-  short?: string;
+  hint: string;
 }
 
-const FIND: NavItem & { menu: { href: string; label: string; hint: string }[]; also: string[] } = {
-  href: '/browse',
-  label: 'Find sponsors',
-  short: 'Sponsors',
-  menu: [
-    { href: '/browse', label: 'By city', hint: 'Cities and towns, and A–Z' },
-    { href: '/industries', label: 'By industry', hint: 'Care, NHS, IT, education and more' },
-    { href: '/councils', label: 'Councils', hint: 'England, Scotland and Wales' },
-  ],
-  also: ['/industries', '/councils'],
-};
+interface Menu {
+  label: string;
+  /** Shorter label on phones. */
+  short: string;
+  items: MenuItem[];
+  /** Paths that count as "inside" this menu, for highlighting. */
+  paths: string[];
+}
 
-const NAV: (NavItem | typeof FIND)[] = [
-  { href: '/sponsors', label: 'Search' },
-  FIND,
-  { href: '/changes', label: 'Latest changes', short: 'Changes' },
-  { href: '/about', label: 'About the data', short: 'About' },
+/** Top menu: two dropdowns. "About the data" and the FAQ live in the footer. */
+const MENUS: Menu[] = [
+  {
+    label: 'Find sponsors',
+    short: 'Sponsors',
+    items: [
+      { href: '/sponsors', label: 'Search', hint: 'Find a company by name or town' },
+      { href: '/browse', label: 'By city', hint: 'Cities and towns, and A–Z' },
+      { href: '/industries', label: 'By industry', hint: 'Care, NHS, IT, education and more' },
+      { href: '/councils', label: 'Councils', hint: 'England, Scotland and Wales' },
+    ],
+    paths: ['/sponsors', '/browse', '/industries', '/councils'],
+  },
+  {
+    label: 'Licences',
+    short: 'Licences',
+    items: [
+      { href: '/changes', label: 'Latest changes', hint: 'Every change to the register, newest first' },
+      { href: '/changes?type=added', label: 'New sponsors', hint: 'Recently licensed employers' },
+      { href: '/changes?type=removed', label: 'Removed sponsors', hint: 'Taken off the register' },
+      { href: '/changes?type=downgraded', label: 'Downgraded to B', hint: 'Rating cut to B' },
+      { href: '/faq', label: 'Licences explained', hint: 'Ratings, removals and certificates' },
+    ],
+    paths: ['/changes', '/faq'],
+  },
 ];
 
 const isUnder = (path: string, href: string) => path === href || path.startsWith(`${href}/`);
-const linkClass = (active: boolean) =>
-  `rounded-xl px-2 py-2 transition-colors sm:px-3 ${active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
 
-function Label({ n }: { n: NavItem }) {
-  return n.short ? (
-    <>
-      <span className="sm:hidden">{n.short}</span>
-      <span className="hidden sm:inline">{n.label}</span>
-    </>
-  ) : (
-    n.label
-  );
-}
-
-/** "Find sponsors ▾": opens on click/tap; closes on choosing an item, clicking elsewhere or Escape. */
-function FindMenu({ path }: { path: string }) {
+/** A dropdown: opens on click/tap; closes on choosing an item, clicking elsewhere or Escape. */
+function NavMenu({ menu, path, alignEnd = false }: { menu: Menu; path: string; alignEnd?: boolean }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const active = [FIND.href, ...FIND.also].some((h) => isUnder(path, h));
+  const active = menu.paths.some((h) => isUnder(path, h));
 
   useEffect(() => {
     if (!open) return;
@@ -74,29 +78,36 @@ function FindMenu({ path }: { path: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center gap-1 ${linkClass(active || open)}`}
+        className={`inline-flex items-center gap-1 rounded-xl px-2 py-2 transition-colors sm:px-3 ${
+          active || open ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        }`}
       >
-        <Label n={FIND} />
+        <span className="sm:hidden">{menu.short}</span>
+        <span className="hidden sm:inline">{menu.label}</span>
         <svg viewBox="0 0 20 20" className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} fill="currentColor" aria-hidden>
           <path fillRule="evenodd" d="M5.2 7.2a.75.75 0 0 1 1.06 0L10 10.94l3.74-3.74a.75.75 0 1 1 1.06 1.06l-4.27 4.27a.75.75 0 0 1-1.06 0L5.2 8.26a.75.75 0 0 1 0-1.06Z" />
         </svg>
       </button>
       {open && (
-        <div role="menu" className="absolute left-0 z-40 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg shadow-slate-900/10">
-          {FIND.menu.map((m) => (
-            <Link
-              key={m.href}
-              href={m.href}
-              role="menuitem"
-              prefetch={false}
-              onClick={() => setOpen(false)}
-              aria-current={isUnder(path, m.href) ? 'page' : undefined}
-              className={`block rounded-xl px-3 py-2.5 hover:bg-indigo-50 ${isUnder(path, m.href) ? 'bg-indigo-50' : ''}`}
-            >
-              <span className={`block ${isUnder(path, m.href) ? 'text-indigo-700' : 'text-slate-900'}`}>{m.label}</span>
-              <span className="block text-xs font-normal text-slate-500">{m.hint}</span>
-            </Link>
-          ))}
+        <div role="menu" className={`absolute left-0 z-40 mt-2 w-64 ${alignEnd ? 'sm:right-0 sm:left-auto' : ''} overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg shadow-slate-900/10`}>
+          {menu.items.map((m) => {
+            // Only plain paths are highlighted ("/changes?type=added" shares "/changes" with "Latest changes").
+            const current = !m.href.includes('?') && path === m.href;
+            return (
+              <Link
+                key={m.href}
+                href={m.href}
+                role="menuitem"
+                prefetch={false}
+                onClick={() => setOpen(false)}
+                aria-current={current ? 'page' : undefined}
+                className={`block rounded-xl px-3 py-2.5 hover:bg-indigo-50 ${current ? 'bg-indigo-50' : ''}`}
+              >
+                <span className={`block ${current ? 'text-indigo-700' : 'text-slate-900'}`}>{m.label}</span>
+                <span className="block text-xs font-normal text-slate-500">{m.hint}</span>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -113,15 +124,10 @@ export function SiteHeader({ siteName }: { siteName: string }) {
           <span className="text-lg font-bold tracking-tight text-slate-900">{siteName}</span>
         </Link>
         <nav className="flex flex-wrap items-center gap-0.5 text-sm font-semibold sm:gap-1">
-          {NAV.map((n) => {
-            if (n === FIND) return <FindMenu key={n.href} path={path} />;
-            const active = isUnder(path, n.href);
-            return (
-              <Link key={n.href} href={n.href} aria-current={active ? 'page' : undefined} className={linkClass(active)}>
-                <Label n={n} />
-              </Link>
-            );
-          })}
+          {MENUS.map((m, i) => (
+            // The last menu opens leftwards on wider screens so it stays on screen.
+            <NavMenu key={m.label} menu={m} path={path} alignEnd={i === MENUS.length - 1} />
+          ))}
           <span className="sm:ml-1">
             <UserMenu />
           </span>

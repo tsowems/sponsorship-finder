@@ -197,3 +197,13 @@ export function Analytics() {
 ## Site-wide settings
 
 `src/lib/site.ts`: `SITE_NAME` (env-overridable), `SITE_TAGLINE`, `SITE_URL`, `REGISTER_URL`, `IS_INDEXABLE`, `CONTACT_EMAIL` (env-overridable).
+
+## Header menu and company-page 404s
+
+- **Header** (`components/SiteHeader.tsx`): two dropdowns. **Find sponsors** (Search, By city, By industry, Councils) and
+  **Licences** (Latest changes, New / Removed / Downgraded views of `/changes`, "Licences explained" → `/faq`). "About the
+  data" and the FAQ are in the footer. Add menu items in `MENUS`.
+- **Unknown company addresses** get a real `404` from `src/proxy.ts` (one indexed slug lookup, remembered in memory), because
+  the company page streams and would otherwise answer `200` + `noindex`. Companies are never deleted, so remembered slugs don't go stale.
+- "Search the web" on company pages is shown to signed-in users only, like the website and jobs.
+
