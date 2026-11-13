@@ -163,6 +163,7 @@ When staging looks right:
 | `ci.yml` | push to `staging`, PR into `main` | typecheck, lint, tests, migrate staging DB, build |
 | `register-import.yml` | weekdays every 2h 06:15–18:15 UTC, weekends 12:15 UTC, or manually | imports a changed register, sends alert emails |
 | `enrich.yml` | every 4 hours (:40), or manually | finds websites, careers pages and jobs for 150 sponsors; refreshes job lists |
+| `care-registers.yml` | 8th of each month 06:15 UTC, or manually | matches sponsors to the CQC (England) and Care Inspectorate (Scotland) registers; powers the home care page. Run it once by hand after the first deploy that includes migration 0010 |
 
 Approximate Actions usage (private repo, 2,000 free minutes): import ~300, enrichment ~600, CI ~100 minutes/month.
 

@@ -44,10 +44,20 @@ export default async function IndustryPage({ params, searchParams }: PageProps<'
       <header className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{ind.title}: visa sponsors</h1>
         <p className="max-w-3xl text-slate-600">{ind.intro}</p>
-        <p className="max-w-3xl text-sm text-slate-500">
-          Based on Companies House industry codes where we have them, and on organisations&apos; names. Being licensed doesn&apos;t mean every role is
-          eligible for sponsorship: check the job advert or ask the employer.
-        </p>
+        {ind.careRegister ? (
+          <p className="max-w-3xl text-sm text-slate-500">
+            Confirmed against the care regulators&apos; registers of home-care services (
+            <a href="https://www.cqc.org.uk/about-us/transparency/using-cqc-data" rel="noopener" target="_blank" className="underline hover:text-slate-700">CQC</a> in England,
+            the <a href="https://www.careinspectorate.scot/resources-data/data-and-statistics/datastore" rel="noopener" target="_blank" className="underline hover:text-slate-700">Care Inspectorate</a> in
+            Scotland), plus organisations whose names say home care, mainly in Wales and Northern Ireland. Being licensed doesn&apos;t mean every role is eligible
+            for sponsorship: check the job advert or ask the employer. Contains public sector information licensed under the Open Government Licence v3.0.
+          </p>
+        ) : (
+          <p className="max-w-3xl text-sm text-slate-500">
+            Based on Companies House industry codes where we have them, and on organisations&apos; names. Being licensed doesn&apos;t mean every role is
+            eligible for sponsorship: check the job advert or ask the employer.
+          </p>
+        )}
       </header>
 
       {user ? <FullList slug={ind.slug} total={total} searchParams={searchParams} /> : <Preview slug={ind.slug} total={total} />}

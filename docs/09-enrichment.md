@@ -167,3 +167,23 @@ repo secret.
 - A search API (e.g. Brave Search) as another candidate source, verified the same way.
 - Let signed-in users suggest a website, accepted only if it passes verification.
 - Job boards (Adzuna, Reed) matched to sponsor names, for companies without their own hiring platform.
+
+## Care registers (home care)
+
+`apps/worker/src/care/` matches licensed sponsors to the care regulators' public registers, monthly
+(`.github/workflows/care-registers.yml`, `npm run care -w worker`; `--dry-run`, or `--cqc-file`/`--ci-file` for local copies).
+
+- **Sources** (both Open Government Licence; the latest file is found on each publisher's page every run):
+  CQC's monthly care directory CSV (England, service type "Homecare agencies") and the Care Inspectorate's datastore CSV
+  (Scotland, subtype "Care at Home"; Windows-1252 encoded). Wales (CIW) and Northern Ireland publish no downloadable list.
+- **Matching** (`match.ts`, tested): provider name vs sponsor name after dropping "Ltd/Limited/UK/The" and "t/a" parts (the
+  trading name after "t/a" is tried too). Accepted when a registered service is in the sponsor's town (`name_and_town`), or when
+  the sponsor's name is a registered company name (Ltd/PLC/LLP) and only one provider has it (`company_name`).
+- **Storage**: `care_registrations`, one row per sponsor and regulator, for every matched provider (dentists, GPs, care homes
+  too), with `home_care` true when at least one service is home care. Each run replaces a regulator's rows; a failed download or
+  a file with too few home-care services (`MIN_HOME_CARE_SERVICES`) keeps last month's rows.
+- **Used by**: the "Home care (domiciliary)" industry (`careRegister: 'home_care'` in `lib/industries.ts`: registered home-care
+  providers, plus name/SIC matches that no regulator lists as something else) and the company page ("Registered home care
+  provider", CQC link). Only home-care changes trigger company page refreshes.
+- November 2026 numbers: 3,995 CQC and 244 Care Inspectorate home-care sponsors; 4,364 on the industry page (581 by name alone).
+

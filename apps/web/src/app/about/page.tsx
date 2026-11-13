@@ -50,6 +50,16 @@ export default function AboutPage() {
         publish licence grant dates, so for sponsors that were already listed when we started we say &ldquo;on the register since at least&rdquo;.
       </p>
 
+      <h2>Home care providers</h2>
+      <p>
+        To find home care (domiciliary care) agencies, we match sponsors each month against the care regulators&apos; public registers: the{' '}
+        <a href="https://www.cqc.org.uk/about-us/transparency/using-cqc-data" className="text-indigo-700 underline" rel="noopener">Care Quality Commission</a>{' '}
+        in England and the{' '}
+        <a href="https://www.careinspectorate.scot/resources-data/data-and-statistics/datastore" className="text-indigo-700 underline" rel="noopener">Care Inspectorate</a>{' '}
+        in Scotland. A match needs the same organisation name and, unless it&apos;s a unique registered company name, a registered service in the
+        sponsor&apos;s town. Wales and Northern Ireland don&apos;t publish a downloadable list, so there we go by the organisation&apos;s name.
+      </p>
+
       <h2>What it can&apos;t tell you</h2>
       <p>
         A sponsor licence means an employer <em>can</em> sponsor Skilled Worker visas, not that it will sponsor a particular role. The job

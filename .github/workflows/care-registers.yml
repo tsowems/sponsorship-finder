@@ -1,0 +1,62 @@
+# Matches licensed sponsors to the care regulators' public registers (CQC in England, Care Inspectorate in Scotland),
+# which powers the "Home care (domiciliary)" industry page and the "Registered home care provider" line on company pages.
+# Both registers are republished monthly, early in the month.
+name: Care registers
+
+on:
+  schedule:
+    # 06:15 UTC on the 8th of every month.
+    - cron: '15 6 8 * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which database
+        type: choice
+        options: [production, staging]
+        default: production
+
+concurrency:
+  group: care-${{ inputs.target || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  care:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ (inputs.target || 'production') == 'production' && 'main' || 'staging' }}
+
+      - name: Select production or staging settings
+        env:
+          TARGET: ${{ inputs.target || 'production' }}
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          PROD_BETTER_AUTH_SECRET: ${{ secrets.PROD_BETTER_AUTH_SECRET }}
+          PROD_SITE_URL: ${{ vars.PROD_SITE_URL }}
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          STAGING_BETTER_AUTH_SECRET: ${{ secrets.STAGING_BETTER_AUTH_SECRET }}
+          STAGING_SITE_URL: ${{ vars.STAGING_SITE_URL }}
+        run: |
+          if [ "$TARGET" = production ]; then P=PROD; else P=STAGING; fi
+          db_var="${P}_DATABASE_URL"; secret_var="${P}_BETTER_AUTH_SECRET"; url_var="${P}_SITE_URL"
+          if [ -z "${!db_var}" ]; then echo "::error::$db_var secret is empty in this run (run the Check settings workflow)"; exit 1; fi
+          echo "DATABASE_URL=${!db_var}" >> "$GITHUB_ENV"
+          # Optional: used to refresh company pages on the website as soon as results are saved.
+          if [ -n "${!secret_var}" ] && [ -n "${!url_var}" ]; then
+            echo "BETTER_AUTH_SECRET=${!secret_var}" >> "$GITHUB_ENV"
+            echo "SITE_URL=${!url_var}" >> "$GITHUB_ENV"
+          else
+            echo "::warning::$secret_var or $url_var not set: pages will update on their normal hourly cache instead of instantly."
+          fi
+          echo "Target: $TARGET"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Match sponsors to the care registers
+        run: npm run care -w worker

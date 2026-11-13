@@ -244,6 +244,31 @@ export const jobs = pgTable(
   ],
 );
 
+/**
+ * Sponsors matched to the care regulators' public registers (refreshed monthly by the worker's `care` job):
+ * CQC in England and the Care Inspectorate in Scotland. One row per sponsor and regulator.
+ * `homeCare` = the provider runs at least one home-care service ("Homecare agencies" / "Care at Home").
+ */
+export const careRegistrations = pgTable(
+  'care_registrations',
+  {
+    sponsorId: integer('sponsor_id').notNull().references(() => sponsors.id, { onDelete: 'cascade' }),
+    /** 'cqc' (England) | 'care_inspectorate' (Scotland) */
+    regulator: text('regulator').notNull(),
+    providerId: text('provider_id').notNull(),
+    providerName: text('provider_name').notNull(),
+    homeCare: boolean('home_care').notNull(),
+    /** Registered services/locations, and how many of them are home care. */
+    services: integer('services').notNull(),
+    homeCareServices: integer('home_care_services').notNull(),
+    /** 'name_and_town' (same name, a service in the sponsor's town) | 'company_name' (same registered company name) */
+    matchedBy: text('matched_by').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.sponsorId, t.regulator] }), index('care_registrations_home_care_idx').on(t.homeCare, t.sponsorId)],
+);
+
+export type CareRegistration = typeof careRegistrations.$inferSelect;
 export type SponsorProfile = typeof sponsorProfiles.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type Sponsor = typeof sponsors.$inferSelect;

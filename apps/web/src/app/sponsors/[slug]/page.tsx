@@ -46,7 +46,8 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
   const { slug } = await params;
   const data = await getSponsorBySlug(slug);
   if (!data) notFound();
-  const { sponsor, events, trackingSince, sameName, profile } = data;
+  const { sponsor, events, trackingSince, sameName, profile, homeCare } = data;
+  const cqc = homeCare.find((h) => h.regulator === 'cqc');
   // Website, careers, jobs and job-board links are for signed-in users only, and aren't sent to anyone else.
   const signedIn = Boolean(await getCurrentUser());
   const active = sponsor.status === 'active';
@@ -106,6 +107,19 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
             <dt className="text-slate-500">Visa routes</dt>
             <dd className="font-medium text-slate-900">{routes.join(' · ')}</dd>
           </div>
+          {homeCare.length > 0 && (
+            <div>
+              <dt className="text-slate-500">Home care</dt>
+              <dd className="font-medium text-slate-900">
+                <Link href="/industries/home-care-domiciliary" prefetch={false} className="hover:text-indigo-700 hover:underline">
+                  Registered home care provider
+                </Link>{' '}
+                <span className="font-normal text-slate-500">
+                  ({homeCare.map((h) => (h.regulator === 'cqc' ? 'CQC, England' : 'Care Inspectorate, Scotland')).join('; ')})
+                </span>
+              </dd>
+            </div>
+          )}
           {profile?.incorporatedOn && (
             <div>
               <dt className="text-slate-500">Incorporated</dt>
@@ -243,6 +257,13 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                   {profile?.companyStatus && profile.companyStatus !== 'active' && (
                     <span className="ml-1 font-medium text-red-700">({profile.companyStatus.replace(/-/g, ' ')})</span>
                   )}
+                </li>
+              )}
+              {cqc && (
+                <li>
+                  <a className="text-indigo-700 hover:underline" href={`https://www.cqc.org.uk/provider/${encodeURIComponent(cqc.providerId)}`} rel="noopener nofollow" target="_blank">
+                    CQC inspections and ratings ↗
+                  </a>
                 </li>
               )}
               <li><a className="text-indigo-700 hover:underline" href={webSearch} rel="noopener nofollow" target="_blank">Search the web ↗</a></li>

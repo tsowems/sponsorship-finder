@@ -1,6 +1,6 @@
 import { cacheLife, cacheTag } from 'next/cache';
 import { and, asc, count, eq, sql, type SQL } from 'drizzle-orm';
-import { getDb, sponsors } from '@sponsors/db';
+import { careRegistrations, getDb, sponsors } from '@sponsors/db';
 import { browsePage, type Cursor } from './browse';
 
 /**
@@ -22,6 +22,11 @@ export interface Industry {
   words: string[];
   /** Whole words/phrases that rule a name out ("domiciliary" opticians, a schools charity called "home support"). */
   exclude?: string[];
+  /**
+   * Home care: also include sponsors the care regulators list as home-care providers (CQC "Homecare agencies",
+   * Care Inspectorate "Care at Home"), and drop name matches the regulators list only as something else (care homes).
+   */
+  careRegister?: 'home_care';
 }
 
 export const INDUSTRIES: Industry[] = [
@@ -37,6 +42,7 @@ export const INDUSTRIES: Industry[] = [
     sic: ['8810'],
     words: ['domiciliary', 'home care', 'homecare', 'care at home', 'live in care', 'livein care', 'home support', 'care in the home', 'home carers', 'visiting care'],
     exclude: ['specsavers', 'opticians', 'optician', 'eyecare', 'dental', 'school home support'],
+    careRegister: 'home_care',
   },
   {
     slug: 'healthcare-and-nhs', title: 'Healthcare and NHS', phrase: 'healthcare and the NHS',
@@ -115,13 +121,15 @@ export function industryWhere(ind: Industry): SQL {
   const words = `\\m(${ind.words.map(escapeRe).join('|')})\\M`;
   const sic = `^(${ind.sic.join('|')})`;
   const excluded = ind.exclude?.length ? sql`${sponsors.normalizedName} !~ ${`\\m(${ind.exclude.map(escapeRe).join('|')})\\M`}` : undefined;
-  return and(
-    eq(sponsors.status, 'active'),
-    sql`(${sponsors.normalizedName} ~ ${words} or exists (
+  const byNameOrSic = sql`(${sponsors.normalizedName} ~ ${words} or exists (
       select 1 from sponsor_profiles p where p.sponsor_id = ${sponsors.id} and p.sic_codes is not null
-        and exists (select 1 from unnest(p.sic_codes) c where c ~ ${sic})))`,
-    excluded,
-  )!;
+        and exists (select 1 from unnest(p.sic_codes) c where c ~ ${sic})))`;
+  if (ind.careRegister === 'home_care') {
+    const registered = sql`exists (select 1 from ${careRegistrations} r where r.sponsor_id = ${sponsors.id})`;
+    const homeCare = sql`exists (select 1 from ${careRegistrations} r where r.sponsor_id = ${sponsors.id} and r.home_care)`;
+    return and(eq(sponsors.status, 'active'), sql`(${homeCare} or (${byNameOrSic} and not ${registered}))`, excluded)!;
+  }
+  return and(eq(sponsors.status, 'active'), byNameOrSic, excluded)!;
 }
 
 /** Sponsor counts per industry (cached for everyone; refreshed after imports). */
