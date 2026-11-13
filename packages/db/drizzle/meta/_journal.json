@@ -71,6 +71,13 @@
       "when": 1794253215144,
       "tag": "0009_user_last_sign_in",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794590628780,
+      "tag": "0010_care_registrations",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { cacheLife, cacheTag } from 'next/cache';
 import { and, asc, count, desc, eq, gte, ilike, inArray, sql, type SQL } from 'drizzle-orm';
 import {
+  careRegistrations,
   cleanTown,
   getDb,
   normalizeName,
@@ -67,7 +68,13 @@ export async function getSponsorBySlug(slug: string) {
 
   const [profile] = await db.select().from(sponsorProfiles).where(eq(sponsorProfiles.sponsorId, sponsor.id));
 
-  return { sponsor, events, trackingSince: tracking?.since ?? null, sameName, profile: profile ?? null };
+  // Home-care registrations with CQC / the Care Inspectorate (refreshed monthly by the worker's `care` job).
+  const homeCare = await db
+    .select({ regulator: careRegistrations.regulator, providerId: careRegistrations.providerId, providerName: careRegistrations.providerName, homeCareServices: careRegistrations.homeCareServices })
+    .from(careRegistrations)
+    .where(and(eq(careRegistrations.sponsorId, sponsor.id), eq(careRegistrations.homeCare, true)));
+
+  return { sponsor, events, trackingSince: tracking?.since ?? null, sameName, profile: profile ?? null, homeCare };
 }
 
 // ---------------------------------------------------------------- search
