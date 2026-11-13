@@ -50,7 +50,7 @@ The installed docs are the authority: `node_modules/next/dist/docs/01-app/01-get
 | `/browse/[letter]` | `app/browse/[letter]/page.tsx` | **Rendered per request** | Licensed sponsors A–Z for one letter (`0-9`, `a`…`z`), 50 per page, `?after=<id>` / `?before=<id>` keyset paging (fast at any depth, reaches every sponsor). Paged views `noindex,follow` |
 | `/browse/towns` | `app/browse/towns/page.tsx` | Static, refreshed daily | Towns with 3+ licensed sponsors, A–Z |
 | `/browse/towns/[town]` | `app/browse/towns/[town]/page.tsx` | **Rendered per request** | One place's sponsors A–Z, same paging. Spellings of the same place are merged (`packages/db/src/towns.ts`: postcodes, "England", counties, "Greater London", "Ilford London" → Ilford, "saint" → "st"); other spellings' addresses redirect to the merged page. The search town filter and town suggestions use the same grouping. Under 3 sponsors `noindex` |
-| `/industries` | `app/industries/page.tsx` | Static, refreshed daily | 13 industries with sponsor counts (`lib/industries.ts`: Companies House SIC code where known, else whole words in the name) |
+| `/industries` | `app/industries/page.tsx` | Static, refreshed daily | 14 industries with sponsor counts (`lib/industries.ts`: Companies House SIC code where known, else whole words in the name) |
 | `/industries/[industry]` | `app/industries/[industry]/page.tsx` | **Rendered per request** | Public: intro, count and the first 10 A–Z (what search engines see). Signed in: full list, 50 per page, `?after=`/`?before=` paging. Paged views `noindex` |
 | `/industries/[industry]/[town]` | `app/industries/[industry]/[town]/page.tsx` | **Rendered per request** | One industry in one merged place (same town merging as `/browse/towns`). Public: first 10; signed in: full list with paging. The industry page shows a "By city" picker (`components/IndustryTowns.tsx`, counts from cached `getIndustryTowns`). Other spellings redirect; places with no sponsors 404; under 3 sponsors `noindex`; 5 or more go in the sitemap |
 | `/councils` | `app/councils/page.tsx` | Static, refreshed daily | Licensed local councils by nation (England, Scotland, Wales; Northern Ireland appears only if any are licensed). Recognised by name shape in `@sponsors/db` `councils.ts` (`councilNation`), so the British Council, GMC, parish/town councils etc. are excluded |
@@ -201,9 +201,9 @@ export function Analytics() {
 ## Header menu and company-page 404s
 
 - **Header** (`components/SiteHeader.tsx`): two dropdowns. **Find sponsors** (Search, By city, By industry, Councils) and
-  **Licences** (Latest changes, New / Removed / Downgraded views of `/changes`, "Licences explained" → `/faq`). "About the
+  **Licences** (Latest changes, New / Removed / Downgraded views of `/changes`, "Licences explained" → `/faq`). Find sponsors also links "NHS trusts" (`/industries/nhs-trusts-and-health-boards`). "About the
   data" and the FAQ are in the footer. Add menu items in `MENUS`.
 - **Unknown company addresses** get a real `404` from `src/proxy.ts` (one indexed slug lookup, remembered in memory), because
   the company page streams and would otherwise answer `200` + `noindex`. Companies are never deleted, so remembered slugs don't go stale.
 - "Search the web" on company pages is shown to signed-in users only, like the website and jobs.
-
+- Industries can leave out another industry (`notIn`): "Healthcare (non-NHS)" (`/industries/healthcare`) excludes "NHS trusts and health boards". The old `/industries/healthcare-and-nhs` addresses redirect (`MOVED_INDUSTRIES`).

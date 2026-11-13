@@ -7,7 +7,7 @@ import { IndustryTowns } from '@/components/IndustryTowns';
 import { SponsorList } from '@/components/SponsorList';
 import { findTownByName, getTowns, MIN_INDEXED_TOWN, readCursor, townFromSlug } from '@/lib/browse';
 import { formatNumber } from '@/lib/format';
-import { browseIndustryTown, findIndustry, getIndustryTowns } from '@/lib/industries';
+import { browseIndustryTown, findIndustry, getIndustryTowns, MOVED_INDUSTRIES } from '@/lib/industries';
 import { getCurrentUser } from '@/lib/session';
 
 /** Rendered per request: the full list depends on who's signed in, and cursors would otherwise be stored ISR pages. */
@@ -40,6 +40,8 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/ind
 export default async function IndustryTownPage({ params, searchParams }: PageProps<'/industries/[industry]/[town]'>) {
   await connection();
   const { industry, town: townSlug } = await params;
+  const moved = MOVED_INDUSTRIES[industry];
+  if (moved) permanentRedirect(`/industries/${moved}/${townSlug}`);
   const found = await load(industry, townSlug);
   if (!found) notFound();
   const { ind } = found;

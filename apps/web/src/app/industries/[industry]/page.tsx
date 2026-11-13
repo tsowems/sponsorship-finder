@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { Pager, RangeNote } from '@/components/Browse';
 import { IndustryTowns } from '@/components/IndustryTowns';
 import { SponsorList } from '@/components/SponsorList';
 import { readCursor } from '@/lib/browse';
 import { formatNumber } from '@/lib/format';
-import { browseIndustry, findIndustry, getIndustryCounts, getIndustryTowns, INDUSTRIES, industryPreview } from '@/lib/industries';
+import { browseIndustry, findIndustry, getIndustryCounts, getIndustryTowns, INDUSTRIES, industryPreview, MOVED_INDUSTRIES } from '@/lib/industries';
 import { getCurrentUser } from '@/lib/session';
 
 /** Rendered per request: the full list depends on who's signed in, and cursors would otherwise be stored ISR pages. */
@@ -32,6 +32,8 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/ind
 export default async function IndustryPage({ params, searchParams }: PageProps<'/industries/[industry]'>) {
   await connection();
   const { industry: slug } = await params;
+  const moved = MOVED_INDUSTRIES[slug];
+  if (moved) permanentRedirect(`/industries/${moved}`);
   const ind = findIndustry(slug);
   if (!ind) notFound();
   const [user, counts, towns] = await Promise.all([getCurrentUser(), getIndustryCounts(), getIndustryTowns(ind.slug)]);
