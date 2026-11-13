@@ -12,6 +12,7 @@ import {
   sponsors,
   type SponsorEventType,
 } from '@sponsors/db';
+import { ownSiteJobs } from '@sponsors/enrich';
 import { SITE_URL } from './site';
 
 /**
@@ -220,7 +221,8 @@ export async function getSponsorApi(idOrSlug: string) {
     db
       .select({ id: jobs.id, title: jobs.title, location: jobs.location, department: jobs.department, url: jobs.url, isUk: jobs.isUk, remote: jobs.remote, postedAt: jobs.postedAt, firstSeenAt: jobs.firstSeenAt })
       .from(jobs)
-      .where(eq(jobs.sponsorId, row.id))
+      // The company's own roles only: job-board adverts (Reed) aren't ours to redistribute.
+      .where(and(eq(jobs.sponsorId, row.id), ownSiteJobs()))
       .orderBy(desc(jobs.isUk), sql`${jobs.postedAt} desc nulls last`, asc(jobs.title))
       .limit(500),
   ]);

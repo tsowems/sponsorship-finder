@@ -209,3 +209,19 @@ Signed-in users can suggest a company's website or careers page from its company
   wins over our own careers search, and works even when no website was found.
 - Company page wording: `websiteVerifiedBy = 'admin'` → "Website suggested by a visitor and checked by us".
 
+## Job boards (Reed)
+
+Companies' own adverts on Reed, alongside the roles read from their own careers site (`packages/enrich/src/reed.ts`, `boards.ts`).
+
+- **Search**: Reed's free Jobseeker API (`REED_API_KEY`, Basic auth, key as user name; never follows redirects so the key only
+  goes to Reed). One call per company: keywords = the name without "Ltd"/"t/a…", up to 100 results, then only adverts whose
+  advertiser name *is* the sponsor (`employerKey`) are kept, so recruitment-agency adverts and similarly named firms are left out.
+- **When**: when a signed-in user opens a company page (`GET /api/board-jobs`, called by `components/ReedJobs.tsx`), if the last
+  check is over 3 days old; and every enrichment run for watched companies (`refreshWatchedBoardJobs`, `--reed-limit`, default 150).
+- **Allowance**: `api_usage` counts calls per London day; `REED_DAILY_LIMIT` (default 900) is shared by the site and the worker.
+  `board_checks` records each company's last check (claimed at the start, so two visitors don't trigger two searches; a failed
+  search is retried after an hour).
+- **Storage**: rows in `jobs` with `source = 'reed'` (salary text in `department`). They are kept apart from the company's own
+  roles: own-site refreshes don't delete them, `/api/jobs` and the public data API (`/api/v1`) exclude them (`ownSiteJobs()`).
+- Shown as "On Reed: N adverts posted by them" with a "Jobs by reed.co.uk" credit, signed-in users only.
+

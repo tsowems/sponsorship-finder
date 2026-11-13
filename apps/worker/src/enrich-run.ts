@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, notExists, notInArray, or, sql } from 'drizzle-orm';
-import { getDb, sponsorProfiles, sponsors } from '@sponsors/db';
-import { discoverSponsor, FETCHABLE_ATS, refreshSponsorJobs, saveDiscovery, saveError, sponsorInputColumns, type SponsorInput } from '@sponsors/enrich';
+import { boardChecks, getDb, sponsorProfiles, sponsors, watches } from '@sponsors/db';
+import { BOARD_REFRESH_MS, discoverSponsor, FETCHABLE_ATS, REED_SOURCE, reedEnabled, refreshReedJobs, refreshSponsorJobs, saveDiscovery, saveError, sponsorInputColumns, type SponsorInput } from '@sponsors/enrich';
 import { revalidateSite } from './revalidate';
 
 const cols = sponsorInputColumns;
@@ -120,4 +120,35 @@ export async function refreshJobs(opts: { limit: number; log?: (m: string) => vo
   await revalidateSite({ slugs: refreshed }, log);
   log(`[jobs] refreshed ${due.length} job lists, ${total} openings`);
   return { refreshed: due.length, jobs: total };
+}
+
+/**
+ * Reed adverts for companies people watch, so their pages are ready before anyone opens them.
+ * Shares Reed's daily allowance with page views (see refreshReedJobs), and stops as soon as it's used up.
+ */
+export async function refreshWatchedBoardJobs(opts: { limit: number; log?: (m: string) => void }): Promise<{ checked: number; stopped: string | null }> {
+  const log = opts.log ?? console.log;
+  if (!reedEnabled()) {
+    log('[reed] skipped: REED_API_KEY not set');
+    return { checked: 0, stopped: 'disabled' };
+  }
+  const due = new Date(Date.now() - BOARD_REFRESH_MS);
+  const rows = await getDb()
+    .selectDistinct({ id: sponsors.id, name: sponsors.name })
+    .from(watches)
+    .innerJoin(sponsors, eq(sponsors.id, watches.sponsorId))
+    .leftJoin(boardChecks, and(eq(boardChecks.sponsorId, sponsors.id), eq(boardChecks.board, REED_SOURCE)))
+    .where(and(eq(sponsors.status, 'active'), or(isNull(boardChecks.checkedAt), lt(boardChecks.checkedAt, due))))
+    .limit(opts.limit);
+  let checked = 0;
+  for (const s of rows) {
+    const r = await refreshReedJobs(s);
+    if (r === 'over_limit') {
+      log(`[reed] daily allowance used up after ${checked} checks`);
+      return { checked, stopped: r };
+    }
+    if (r === 'refreshed') checked++;
+  }
+  log(`[reed] checked ${checked} watched companies`);
+  return { checked, stopped: null };
 }

@@ -10,7 +10,7 @@ import { parseArgs } from 'node:util';
 import { eq } from 'drizzle-orm';
 import { closeDb, getDb, sponsors } from '@sponsors/db';
 import { discoverSponsor, saveDiscovery } from '@sponsors/enrich';
-import { refreshJobs, runEnrichment } from '../enrich-run';
+import { refreshJobs, refreshWatchedBoardJobs, runEnrichment } from '../enrich-run';
 import { revalidateSite } from '../revalidate';
 
 const { values } = parseArgs({
@@ -18,6 +18,7 @@ const { values } = parseArgs({
     limit: { type: 'string', default: '100' },
     concurrency: { type: 'string', default: '6' },
     'jobs-limit': { type: 'string', default: '300' },
+    'reed-limit': { type: 'string', default: '150' },
     sponsor: { type: 'string' },
     'dry-run': { type: 'boolean', default: false },
   },
@@ -41,6 +42,7 @@ async function main() {
   }
   console.log(JSON.stringify(await runEnrichment({ limit: Number(values.limit), concurrency: Number(values.concurrency) })));
   console.log(JSON.stringify(await refreshJobs({ limit: Number(values['jobs-limit']) })));
+  console.log(JSON.stringify(await refreshWatchedBoardJobs({ limit: Number(values['reed-limit']) })));
 }
 
 main()
