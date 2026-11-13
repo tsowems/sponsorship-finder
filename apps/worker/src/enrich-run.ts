@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, notExists, notInArray, or, sql } from 'drizzle-orm';
 import { getDb, sponsorProfiles, sponsors } from '@sponsors/db';
-import { discover, FETCHABLE_ATS, refreshSponsorJobs, saveDiscovery, saveError, sponsorInputColumns, type SponsorInput } from '@sponsors/enrich';
+import { discoverSponsor, FETCHABLE_ATS, refreshSponsorJobs, saveDiscovery, saveError, sponsorInputColumns, type SponsorInput } from '@sponsors/enrich';
 import { revalidateSite } from './revalidate';
 
 const cols = sponsorInputColumns;
@@ -64,7 +64,7 @@ export async function runEnrichment(opts: { limit: number; concurrency?: number;
   };
   await pool(batch, opts.concurrency ?? 6, async (s) => {
     try {
-      const d = await discover(s);
+      const d = await discoverSponsor(s);
       await saveDiscovery(s.id, d);
       if (s.slug) pending.push(s.slug);
       if (pending.length >= 25) await flush();

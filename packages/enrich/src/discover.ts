@@ -23,8 +23,9 @@ export interface SponsorInput {
 export interface Discovery {
   company: CompanyRecord | null;
   website: string | null;
-  websiteSource: 'wikidata' | 'govuk' | 'nhs_ods' | 'wikidata_search' | 'domain_guess' | null;
-  websiteVerifiedBy: VerifiedBy | 'wikidata' | 'govuk' | 'nhs_ods' | null;
+  websiteSource: 'suggested' | 'wikidata' | 'govuk' | 'nhs_ods' | 'wikidata_search' | 'domain_guess' | null;
+  /** 'admin' = a user suggested it and an admin approved it. */
+  websiteVerifiedBy: VerifiedBy | 'wikidata' | 'govuk' | 'nhs_ods' | 'admin' | null;
   careersUrl: string | null;
   /** The hiring system's vacancy list, when we can only link to it and it differs from the careers page. */
   vacanciesUrl: string | null;
@@ -35,13 +36,25 @@ export interface Discovery {
   log: string[];
 }
 
+/** Links users suggested and we accepted (see link_suggestions). Tried before our own search, on every check. */
+export interface KnownLinks {
+  /** `trusted`: an admin approved it, so it's used even if the site can't be fetched or doesn't name the company. */
+  website?: { url: string; trusted: boolean };
+  careers?: string;
+}
+
 /** `jobs.source` for adverts read off a company's own careers page. */
 export const CAREERS_PAGE_SOURCE = 'careers_page';
 
 const originOf = (url: string) => `${new URL(url).origin}/`;
+/** A suggested page on a group's site ("…/our-care-homes/grosvenor-park/") is kept as is, minus query and fragment. */
+const pageOf = (url: string) => {
+  const u = new URL(url);
+  return u.pathname === '/' ? `${u.origin}/` : `${u.origin}${u.pathname}`;
+};
 
 /** Find everything we can about one sponsor. Makes network requests; never writes to the database. */
-export async function discover(s: SponsorInput): Promise<Discovery> {
+export async function discover(s: SponsorInput, known: KnownLinks = {}): Promise<Discovery> {
   const log: string[] = [];
   const out: Discovery = { company: null, website: null, websiteSource: null, websiteVerifiedBy: null, careersUrl: null, vacanciesUrl: null, ats: null, jobs: null, jobsSource: null, log };
 
@@ -66,13 +79,14 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
     if (tried.has(host)) return false;
     tried.add(host);
     const page = await fetchPage(url);
+    const siteUrl = (u: string) => (source === 'suggested' ? pageOf(u) : originOf(u));
     if (trusted) {
-      // Wikidata matched on company number, or GOV.UK's council list: authoritative even if the site blocks bots.
-      out.website = originOf(page?.url ?? url);
+      // Wikidata matched on company number, GOV.UK's council list, or an admin-approved suggestion: authoritative even if the site blocks bots.
+      out.website = siteUrl(page?.url ?? url);
       out.websiteSource = source;
-      out.websiteVerifiedBy = source === 'govuk' || source === 'nhs_ods' ? source : 'wikidata';
+      out.websiteVerifiedBy = source === 'govuk' || source === 'nhs_ods' ? source : source === 'suggested' ? 'admin' : 'wikidata';
       homepage = page;
-      const label = { govuk: 'GOV.UK council list', nhs_ods: 'NHS organisation directory' }[source as string] ?? 'wikidata by company number';
+      const label = { govuk: 'GOV.UK council list', nhs_ods: 'NHS organisation directory', suggested: 'suggested, approved by an admin' }[source as string] ?? 'wikidata by company number';
       log.push(`website: ${out.website} (${label}${page ? '' : ', page not fetchable'})`);
       return true;
     }
@@ -89,7 +103,7 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
       log.push(`rejected ${page.url}: no matching company number or name`);
       return false;
     }
-    out.website = originOf(page.url);
+    out.website = siteUrl(page.url);
     out.websiteSource = source;
     out.websiteVerifiedBy = verified;
     homepage = page;
@@ -97,7 +111,8 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
     return true;
   };
 
-  if (companyNumber) {
+  if (known.website) await tryCandidate(known.website.url, 'suggested', known.website.trusted);
+  if (!out.website && companyNumber) {
     const wd = await websiteByCompanyNumber(companyNumber);
     if (wd) await tryCandidate(wd, 'wikidata', true);
   }
@@ -132,12 +147,17 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
   }
   if (!out.website) {
     log.push('website: not found');
-    return out;
+    if (!known.careers) return out;
   }
 
-  // 3. Careers page + hiring platform
+  // 3. Careers page + hiring platform. A suggested careers page wins over our own search.
+  if (known.careers) {
+    const page = await fetchPage(known.careers);
+    out.careersUrl = page?.url ?? known.careers;
+    out.ats = detectAts(known.careers) ?? (page ? detectAts(page.text, page.url) : null);
+  }
   const home = homepage as FetchedPage | null;
-  if (home) {
+  if (home && !out.careersUrl) {
     const origin = new URL(home.url).origin;
     out.ats = detectAts(home.text);
     for (const link of findCareersLinks(extractLinks(home.text, home.url), origin)) {
@@ -177,7 +197,7 @@ export async function discover(s: SponsorInput): Promise<Discovery> {
     }
   }
   if (out.ats && !FETCHABLE_ATS.has(out.ats.provider) && out.ats.url !== out.careersUrl) out.vacanciesUrl = out.ats.url;
-  log.push(`careers: ${out.careersUrl ?? 'not found'}${out.ats ? ` (${out.ats.provider}: ${out.ats.slug})` : ''}`);
+  log.push(`careers: ${out.careersUrl ?? 'not found'}${known.careers ? ' (suggested)' : ''}${out.ats ? ` (${out.ats.provider}: ${out.ats.slug})` : ''}`);
   if (out.vacanciesUrl) log.push(`vacancies: ${out.vacanciesUrl}`);
 
   // 4. Live openings: from the hiring platform's API, else from adverts on the careers page itself

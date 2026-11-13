@@ -7,6 +7,7 @@ import { EventPill } from '@/components/ChangeList';
 import { JobBoardLinks } from '@/components/JobBoardLinks';
 import { JobsPanel } from '@/components/JobsPanel';
 import { ProfileRequest } from '@/components/ProfileRequest';
+import { SuggestLink } from '@/components/SuggestLink';
 import { WatchButton } from '@/components/WatchButton';
 import { profileNeedsLookup } from '@sponsors/db';
 import { getSponsorBySlug } from '@/lib/data';
@@ -161,13 +162,15 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
           {lookUp && <ProfileRequest sponsorId={sponsor.id} />}
           {signedIn ? (
             <>
-            {profile?.website ? (
+            {profile?.website || profile?.careersUrl ? (
               <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
-                <div className="flex flex-wrap gap-3">
-                  <a href={profile.website} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
-                    Visit {new URL(profile.website).hostname.replace(/^www\./, '')} ↗
-                  </a>
-                </div>
+                {profile.website && (
+                  <div className="flex flex-wrap gap-3">
+                    <a href={profile.website} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+                      Visit {new URL(profile.website).hostname.replace(/^www\./, '')} ↗
+                    </a>
+                  </div>
+                )}
                 <JobsPanel
                   sponsorId={sponsor.id}
                   slug={sponsor.slug}
@@ -177,7 +180,11 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                 />
                 {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} compact={foundJobsOrCareers} />}
                 <p className="text-xs text-slate-500">
-                  {profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
+                  {!profile.website
+                    ? 'Careers page suggested by a visitor. We haven’t found a main website we can confirm.'
+                    : profile.websiteVerifiedBy === 'admin'
+                    ? 'Website suggested by a visitor and checked by us.'
+                    : profile.websiteVerifiedBy === 'company_number' || profile.websiteVerifiedBy === 'wikidata'
                     ? 'Website confirmed using the company’s registration number.'
                     : profile.websiteVerifiedBy === 'govuk'
                       ? 'Official council website, from GOV.UK’s list of local councils.'
@@ -187,6 +194,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                           ? 'Official public-sector website (a protected address such as .gov.uk, .nhs.uk or .ac.uk) naming this organisation.'
                           : 'Website confirmed by the company’s registered name appearing on it.'}
                 </p>
+                <SuggestLink sponsorId={sponsor.id} hasWebsite={Boolean(profile.website)} hasCareers={Boolean(profile.careersUrl || profile.vacanciesUrl)} />
               </div>
             ) : researched ? (
               <div className="space-y-4 rounded-lg border border-dashed border-slate-300 bg-white p-4">
@@ -195,6 +203,7 @@ export default async function SponsorPage({ params }: PageProps<'/sponsors/[slug
                   <a href={webSearch} rel="noopener nofollow" target="_blank" className="text-indigo-700 hover:underline">Search the web ↗</a>
                 </p>
                 {showJobBoards && <JobBoardLinks name={sponsor.name} town={sponsor.town} />}
+                <SuggestLink sponsorId={sponsor.id} hasWebsite={false} hasCareers={false} />
               </div>
             ) : (
               <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">

@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 const ITEMS = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/users', label: 'Users' },
+  { href: '/admin/suggestions', label: 'Suggested links' },
 ];
 
 export function AdminNav() {

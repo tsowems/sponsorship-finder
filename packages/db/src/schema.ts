@@ -269,6 +269,39 @@ export const careRegistrations = pgTable(
 );
 
 export type CareRegistration = typeof careRegistrations.$inferSelect;
+/**
+ * Website and careers links suggested by signed-in users (company page → "Suggest a link").
+ * A suggestion is accepted automatically when it passes the same checks as our own search (company number or full
+ * registered name on the site; careers page on the same site), otherwise an admin reviews it.
+ * Accepted links are fed into every later re-check of that company, so they aren't lost when we look again.
+ */
+export const linkSuggestions = pgTable(
+  'link_suggestions',
+  {
+    id: serial('id').primaryKey(),
+    sponsorId: integer('sponsor_id').notNull().references(() => sponsors.id, { onDelete: 'cascade' }),
+    /** Kept when the account is deleted, so accepted links survive. */
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    /** 'website' | 'careers' */
+    kind: text('kind').notNull(),
+    url: text('url').notNull(),
+    /** 'pending' (waiting for an admin) | 'accepted' | 'rejected' */
+    status: text('status').notNull().default('pending'),
+    /** Who accepted it: 'auto' (passed our checks) | 'admin' */
+    acceptedBy: text('accepted_by'),
+    /** Why it was accepted or not, in plain words (shown to admins). */
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('link_suggestions_sponsor_idx').on(t.sponsorId, t.status),
+    index('link_suggestions_status_idx').on(t.status, t.createdAt),
+    index('link_suggestions_user_idx').on(t.userId, t.createdAt),
+  ],
+);
+
+export type LinkSuggestion = typeof linkSuggestions.$inferSelect;
 export type SponsorProfile = typeof sponsorProfiles.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type Sponsor = typeof sponsors.$inferSelect;
