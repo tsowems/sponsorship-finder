@@ -13,7 +13,10 @@ export interface AtsMatch {
 }
 
 /** Providers whose public job-board APIs we read. The rest we only link to. */
-export const FETCHABLE_ATS: ReadonlySet<AtsProvider> = new Set(['greenhouse', 'lever', 'ashby', 'workable', 'recruitee', 'workday']);
+export const FETCHABLE_ATS: ReadonlySet<AtsProvider> = new Set(['greenhouse', 'lever', 'ashby', 'workable', 'recruitee', 'workday', 'nhsjobs']);
+
+/** A match we can read jobs from (an NHS Jobs link only counts when it carries the employer's code). */
+export const canFetch = (m: AtsMatch) => FETCHABLE_ATS.has(m.provider) && (m.provider !== 'nhsjobs' || /^[A-Z]\d{3,5}$/.test(m.slug));
 
 const ATS_PATTERNS: { provider: AtsProvider; re: RegExp; url: (slug: string, m: RegExpMatchArray) => string; slug?: (m: RegExpMatchArray) => string }[] = [
   { provider: 'greenhouse', re: /(?:boards|job-boards)(?:\.eu)?\.greenhouse\.io\/(?:embed\/job_board(?:\/js)?\?for=)?([a-z0-9_-]+)/i, url: (s) => `https://job-boards.greenhouse.io/${s}` },
@@ -35,7 +38,13 @@ const ATS_PATTERNS: { provider: AtsProvider; re: RegExp; url: (slug: string, m: 
   { provider: 'oracle', re: /https?:\/\/([a-z0-9.-]+)\/hcmUI\/CandidateExperience\/[a-z-]+\/sites\/CX_\d+[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
   { provider: 'oleeo', re: /https?:\/\/([a-z0-9-]+)\.tal\.net\/[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
   { provider: 'trac', re: /https?:\/\/(?:www\.|apps\.)?(trac)\.jobs\/[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
-  { provider: 'nhsjobs', re: /https?:\/\/(?:www\.)?(jobs)\.nhs\.uk\/[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
+  // NHS Jobs: the slug is the employer's code when the link carries one ("…?employerCode=C9273" or "…/jobadvert/C9273-26-0253").
+  {
+    provider: 'nhsjobs',
+    re: /https?:\/\/(?:www\.|beta\.)?(jobs)\.nhs\.uk\/[^\s"'<>]*/i,
+    url: (_s, m) => cleanUrl(m[0]),
+    slug: (m) => /employerCode=([A-Z]\d{3,5})\b/.exec(m[0])?.[1] ?? /\/jobadvert\/([A-Z]\d{3,5})-/.exec(m[0])?.[1] ?? '',
+  },
   { provider: 'successfactors', re: /https?:\/\/(career\d*)\.successfactors\.(?:com|eu)\/[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
   { provider: 'jobtrain', re: /https?:\/\/(?:www\.)?jobtrain\.co\.uk\/([a-z0-9-]+)[^\s"'<>]*/i, url: (_s, m) => cleanUrl(m[0]) },
 ];
@@ -64,7 +73,7 @@ export function detectAts(...sources: string[]): AtsMatch | null {
       if (m && (IGNORED_FOR[p.provider] || !IGNORED_SLUGS.has(m[1].toLowerCase()))) matches.push({ provider: p.provider, slug: p.slug ? p.slug(m) : decodeURIComponent(m[1]), url: p.url(m[1], m) });
     }
   }
-  return matches.find((m) => FETCHABLE_ATS.has(m.provider)) ?? matches[0] ?? null;
+  return matches.find(canFetch) ?? matches[0] ?? null;
 }
 
 const CAREERS_TEXT = /\b(careers?|jobs?|vacanc(?:y|ies)|join (?:us|our team|the team)|work (?:with|for) us|working (?:here|with us|at)|recruitment|opportunities|we.re hiring|current openings)\b/i;

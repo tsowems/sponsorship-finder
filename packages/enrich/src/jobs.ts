@@ -1,6 +1,7 @@
 import type { AtsProvider } from './careers';
 import { fetchJson } from './http';
 import { isUkLocation } from './location';
+import { fetchNhsJobs } from './nhs-jobs';
 
 export interface FetchedJob {
   externalId: string;
@@ -166,7 +167,7 @@ async function workday(slug: string): Promise<FetchedJob[] | null> {
   return out;
 }
 
-const FETCHERS: Partial<Record<AtsProvider, (slug: string) => Promise<FetchedJob[] | null>>> = { greenhouse, lever, ashby, workable, recruitee, workday };
+const FETCHERS: Partial<Record<AtsProvider, (slug: string) => Promise<FetchedJob[] | null>>> = { greenhouse, lever, ashby, workable, recruitee, workday, nhsjobs: fetchNhsJobs };
 
 /** Current openings on a hiring platform, or null if the board doesn't exist / can't be read. */
 export async function fetchJobs(provider: AtsProvider, slug: string): Promise<FetchedJob[] | null> {

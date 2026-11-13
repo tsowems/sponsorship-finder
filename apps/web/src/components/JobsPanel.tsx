@@ -24,7 +24,7 @@ export function JobsPanel(props: { sponsorId: number; slug: string; jobsCount: n
   const { sponsorId, slug, jobsCount, ukJobsCount, hasCareersPage } = props;
   const { data: session, isPending } = authClient.useSession();
   const signedIn = Boolean(session?.user);
-  const [data, setData] = useState<{ careersUrl: string | null; vacanciesUrl?: string | null; checkedAt: string | null; jobs: Job[] } | null>(null);
+  const [data, setData] = useState<{ careersUrl: string | null; vacanciesUrl?: string | null; checkedAt: string | null; source?: string | null; jobs: Job[] } | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -84,13 +84,14 @@ export function JobsPanel(props: { sponsorId: number; slug: string; jobsCount: n
 
   if (failed) return <p className="text-sm text-red-700">Couldn&apos;t load open roles. Please refresh the page.</p>;
   if (!data) return <div className="h-20 animate-pulse rounded-md bg-slate-100" aria-hidden />;
+  const seeAll = data.vacanciesUrl ?? data.careersUrl;
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {data.vacanciesUrl && (
           <a href={data.vacanciesUrl} rel="noopener nofollow" target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-            Current vacancies ↗
+            {data.source === 'nhsjobs' ? 'Vacancies on NHS Jobs' : 'Current vacancies'} ↗
           </a>
         )}
         {data.careersUrl && (
@@ -108,7 +109,7 @@ export function JobsPanel(props: { sponsorId: number; slug: string; jobsCount: n
           </a>
         )}
       </div>
-      {data.vacanciesUrl && !data.jobs.length && (
+      {data.vacanciesUrl && !data.jobs.length && data.source !== 'nhsjobs' && (
         <p className="text-xs text-slate-500">
           Their vacancies are on a separate hiring system ({new URL(data.vacanciesUrl).hostname}), linked from their careers page.
         </p>
@@ -132,13 +133,21 @@ export function JobsPanel(props: { sponsorId: number; slug: string; jobsCount: n
               </li>
             ))}
           </ul>
-          {jobsCount > data.jobs.length && data.careersUrl && (
-            <a href={data.careersUrl} rel="noopener nofollow" target="_blank" className="inline-block text-sm text-indigo-700 hover:underline">
-              See all {jobsCount} roles on their careers site ↗
+          {jobsCount > data.jobs.length && seeAll && (
+            <a href={seeAll} rel="noopener nofollow" target="_blank" className="inline-block text-sm text-indigo-700 hover:underline">
+              See all {jobsCount} roles {data.source === 'nhsjobs' ? 'on NHS Jobs' : 'on their careers site'} ↗
             </a>
           )}
           <p className="text-xs text-slate-500">
-            Listed on the company&apos;s own hiring page{data.checkedAt ? `, checked ${fmt.format(new Date(data.checkedAt))}` : ''}. Not every role is
+            {data.source === 'nhsjobs' ? (
+              <>
+                Jobs from{' '}
+                <a href="https://www.jobs.nhs.uk/" rel="noopener nofollow" target="_blank" className="underline hover:text-slate-700">NHS Jobs</a>, external adverts only
+              </>
+            ) : (
+              <>Listed on the company&apos;s own hiring page</>
+            )}
+            {data.checkedAt ? `, checked ${fmt.format(new Date(data.checkedAt))}` : ''}. Not every role is
             eligible for sponsorship: check the job advert or ask the employer.
           </p>
         </>

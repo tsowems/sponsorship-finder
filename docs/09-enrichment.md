@@ -225,3 +225,20 @@ Companies' own adverts on Reed, alongside the roles read from their own careers 
   roles: own-site refreshes don't delete them, `/api/jobs` and the public data API (`/api/v1`) exclude them (`ownSiteJobs()`).
 - Shown as "On Reed: N adverts posted by them" with a "Jobs by reed.co.uk" credit, signed-in users only.
 
+## NHS bodies and NHS Jobs
+
+- **Websites** (`public-bodies.ts`): NHS bodies are matched to the NHS organisation directory (ODS) by their key words,
+  ignoring "The", "NHS", "Foundation", "Trust", word order and short forms (ICB, UHB): `nhsNameKey`. So "The Great Western
+  Hospitals NHS Foundation Trust", "Bradford District Care Trust NHS" and "Oxford University Hospitals NHS Trust" (directory:
+  "…Foundation Trust") all match. Only directory entries that look like NHS organisations are accepted.
+- **Vacancies** (`nhs-jobs.ts`): NHS Jobs' official, free Self-Serve Job Adverts API
+  (`https://www.jobs.nhs.uk/api/v1/search_xml`, no key; guidance from NHSBSA). Each employer has a code (e.g. `C9273`, also the
+  start of its advert IDs). We take it from an `employerCode=` link on the careers page, or search the feed by name and take it
+  from adverts whose employer name matches (`nhsEmployerCode`). Adverts are read by code, external only, up to 300 (100 a page),
+  and stored as the company's own roles (`ats_provider = 'nhsjobs'`, salary and closing date in `department`), so the normal
+  daily job refresh keeps them current. Covers England and Wales; NHS Scotland and TRAC stay as links.
+- Who is checked: names matching `NHS_JOBS_EMPLOYER` (NHS, health board, ambulance service, surgery, medical practice/centre,
+  health centre, hospice, primary care network), even when no website was found. Migration 0014 queued all ~1,700 of them once
+  (NHS bodies first).
+- The jobs panel says "Vacancies on NHS Jobs", credits NHS Jobs and links "See all N roles on NHS Jobs".
+
