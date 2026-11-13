@@ -3,10 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { Pager, RangeNote } from '@/components/Browse';
+import { IndustryTowns } from '@/components/IndustryTowns';
 import { SponsorList } from '@/components/SponsorList';
 import { readCursor } from '@/lib/browse';
 import { formatNumber } from '@/lib/format';
-import { browseIndustry, findIndustry, getIndustryCounts, INDUSTRIES, industryPreview } from '@/lib/industries';
+import { browseIndustry, findIndustry, getIndustryCounts, getIndustryTowns, INDUSTRIES, industryPreview } from '@/lib/industries';
 import { getCurrentUser } from '@/lib/session';
 
 /** Rendered per request: the full list depends on who's signed in, and cursors would otherwise be stored ISR pages. */
@@ -33,7 +34,7 @@ export default async function IndustryPage({ params, searchParams }: PageProps<'
   const { industry: slug } = await params;
   const ind = findIndustry(slug);
   if (!ind) notFound();
-  const [user, counts] = await Promise.all([getCurrentUser(), getIndustryCounts()]);
+  const [user, counts, towns] = await Promise.all([getCurrentUser(), getIndustryCounts(), getIndustryTowns(ind.slug)]);
   const total = counts[ind.slug] ?? 0;
 
   return (
@@ -60,6 +61,9 @@ export default async function IndustryPage({ params, searchParams }: PageProps<'
         )}
       </header>
 
+      <IndustryTowns industry={ind.slug} towns={towns} />
+
+      <h2 className="text-lg font-semibold">All {ind.title.toLowerCase()} sponsors, A–Z</h2>
       {user ? <FullList slug={ind.slug} total={total} searchParams={searchParams} /> : <Preview slug={ind.slug} total={total} />}
 
       <section className="space-y-3 border-t border-slate-200 pt-6">

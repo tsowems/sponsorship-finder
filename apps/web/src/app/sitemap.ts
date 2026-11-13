@@ -1,11 +1,17 @@
 import type { MetadataRoute } from 'next';
 import { getTowns, LETTERS, MIN_INDEXED_TOWN } from '@/lib/browse';
 import { getCouncils, NATIONS } from '@/lib/councils';
-import { INDUSTRIES } from '@/lib/industries';
+import { getIndustryTowns, INDUSTRIES } from '@/lib/industries';
 import { SITE_URL } from '@/lib/site';
 
+const MIN_INDUSTRY_TOWN_SITEMAP = 5;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [towns, councils] = await Promise.all([getTowns(), getCouncils()]);
+  const [towns, councils, industryTowns] = await Promise.all([
+    getTowns(),
+    getCouncils(),
+    Promise.all(INDUSTRIES.map(async (i) => ({ slug: i.slug, towns: await getIndustryTowns(i.slug) }))),
+  ]);
   return [
     { url: `${SITE_URL}/`, changeFrequency: 'daily', priority: 1 },
     { url: `${SITE_URL}/sponsors`, changeFrequency: 'daily' },
@@ -15,6 +21,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...towns.filter((t) => t.count >= MIN_INDEXED_TOWN).map((t) => ({ url: `${SITE_URL}/browse/towns/${t.slug}`, changeFrequency: 'weekly' as const })),
     { url: `${SITE_URL}/industries`, changeFrequency: 'weekly' },
     ...INDUSTRIES.map((i) => ({ url: `${SITE_URL}/industries/${i.slug}`, changeFrequency: 'weekly' as const })),
+    // Industry + city pages with enough sponsors to be useful on their own.
+    ...industryTowns.flatMap((i) =>
+      i.towns.filter((t) => t.count >= MIN_INDUSTRY_TOWN_SITEMAP).map((t) => ({ url: `${SITE_URL}/industries/${i.slug}/${t.slug}`, changeFrequency: 'weekly' as const })),
+    ),
     { url: `${SITE_URL}/councils`, changeFrequency: 'weekly' },
     ...NATIONS.filter((n) => councils[n.slug].length > 0).map((n) => ({ url: `${SITE_URL}/councils/${n.slug}`, changeFrequency: 'weekly' as const })),
     { url: `${SITE_URL}/faq`, changeFrequency: 'monthly' },
