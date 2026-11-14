@@ -20,6 +20,8 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           'AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'BLEXBot', 'DataForSeoBot', 'PetalBot', 'Barkrowler',
           'SeekportBot', 'GPTBot', 'CCBot', 'Bytespider', 'ClaudeBot', 'anthropic-ai', 'Google-Extended',
           'Applebot-Extended', 'meta-externalagent', 'Diffbot', 'ImagesiftBot', 'Omgilibot', 'Timpibot',
+          // Crawlers that send few or no UK visitors but crawl hard.
+          'Amazonbot', 'YandexBot', 'Baiduspider', 'Sogou web spider', 'serpstatbot', 'AwarioBot', 'ZoominfoBot', 'SeznamBot', 'Yeti', 'MauiBot',
         ],
         disallow: '/',
       },

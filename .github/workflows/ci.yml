@@ -15,11 +15,11 @@ concurrency:
 
 jobs:
   check:
-    name: Typecheck, lint, test, build
+    name: Typecheck, lint, test, migrate staging
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # The build prerenders pages from the database, so CI builds against the *staging* database.
+      # Migrations are applied to the *staging* database.
       DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
       SITE_URL: https://staging.example.invalid
       SITE_ENV: staging
@@ -48,10 +48,5 @@ jobs:
         if: env.DATABASE_URL != ''
         run: npm run db:migrate
 
-      - name: Build website
-        if: env.DATABASE_URL != ''
-        run: npm run build
-
-      - name: Build skipped
-        if: env.DATABASE_URL == ''
-        run: echo "::warning::STAGING_DATABASE_URL secret is not set, so the Next.js build was skipped."
+      # No website build here: Vercel builds every push (staging preview, then production), and each build reads a lot
+      # from the database (sitemaps, lists). Building here too doubled that and counted against Neon's free allowance.
