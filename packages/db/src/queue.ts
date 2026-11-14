@@ -22,7 +22,9 @@ export async function requestProfiles(db: Database, sponsorIds: number[], priori
 }
 
 /** Immediate lookups the website may start in any 10 minutes, across all visitors (the rest wait for the worker). */
-export const LIVE_LOOKUPS_PER_10_MIN = 20;
+// Each lookup runs inside a Vercel function (fetching and reading the company's site), which counts against Vercel's
+// free CPU allowance; the background worker (GitHub Actions) does the rest for free.
+export const LIVE_LOOKUPS_PER_10_MIN = 6;
 
 /**
  * Claim a sponsor for an immediate lookup by the website. True when the caller should look it up now:
