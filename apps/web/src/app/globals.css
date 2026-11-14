@@ -38,3 +38,12 @@ body {
   background: #f6f5fb;
   color: var(--color-slate-900);
 }
+
+/* Page-loading bar (components/NavigationProgress.tsx). */
+@keyframes navbar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [role="progressbar"] > div { animation-duration: 3s; }
+}

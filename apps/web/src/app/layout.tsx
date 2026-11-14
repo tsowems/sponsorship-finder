@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Geist_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import { CookieBanner, CookieSettingsButton } from '@/components/CookieBanner';
+import { NavigationProgress } from '@/components/NavigationProgress';
 import { SiteHeader } from '@/components/SiteHeader';
+import { Suspense } from 'react';
 import { IS_INDEXABLE, REGISTER_URL, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 import './globals.css';
 
@@ -22,6 +24,10 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en-GB" className={`${brandSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
+        {/* Reads the URL's query string, so it needs its own Suspense boundary. */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <SiteHeader siteName={SITE_NAME} />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-6 sm:py-10">{children}</main>
         <footer className="border-t border-slate-200 bg-white sm:mt-8">

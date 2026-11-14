@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Suggestion } from '@/lib/data';
+import { startNavigationProgress } from './NavigationProgress';
 
 const DEBOUNCE_MS = 150;
 
@@ -61,6 +62,7 @@ export function SearchAutocomplete({ defaultValue, className }: { defaultValue?:
 
   function go(s: Suggestion) {
     setOpen(false);
+    startNavigationProgress();
     router.push(`/sponsors/${s.slug}`);
   }
 
